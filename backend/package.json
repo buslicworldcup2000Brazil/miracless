@@ -1,0 +1,21 @@
+{
+  "name": "miracless-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^2.2.0",
+    "express": "^5.1.0",
+    "firebase-admin": "^13.4.0",
+    "mongoose": "^8.17.2",
+    "multer": "^1.4.5-lts.1",
+    "node-telegram-bot-api": "^0.66.0",
+    "serverless-http": "^3.2.0"
+  }
+}

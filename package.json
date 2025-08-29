@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@telegram-apps/telegram-ui": "^2.1.9",
+    "buffer": "^6.0.3"
+  }
+}
