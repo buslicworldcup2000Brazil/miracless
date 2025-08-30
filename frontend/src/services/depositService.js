@@ -12,10 +12,15 @@ class DepositService {
     try {
       const response = await fetch(`${API_BASE_URL}/deposit/addresses/${userId}`);
       if (response.ok) {
-        const data = await response.json();
+        const responseText = await response.text();
+        if (!responseText || responseText.trim() === '') {
+          console.warn('Empty response from deposit addresses API');
+          return {};
+        }
+        const data = JSON.parse(responseText);
         return data.addresses || {};
       }
-      throw new Error('Failed to fetch deposit addresses');
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     } catch (error) {
       console.error('Error fetching deposit addresses:', error);
       return {}; // Return empty object if API fails

@@ -89,6 +89,8 @@ class AutoRegistrationService {
   // Register user in backend
   async registerUserInBackend(userData) {
     try {
+      console.log('Sending registration request to /api/auth...');
+
       const response = await fetch('/api/auth', {
         method: 'POST',
         headers: {
@@ -97,7 +99,38 @@ class AutoRegistrationService {
         body: JSON.stringify(userData)
       });
 
-      const result = await response.json();
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+      // Check if response is ok
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('HTTP Error:', response.status, errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      // Check if response has content
+      const contentLength = response.headers.get('content-length');
+      if (contentLength === '0') {
+        console.error('Empty response from server');
+        throw new Error('Server returned empty response');
+      }
+
+      // Try to parse JSON
+      let result;
+      try {
+        const responseText = await response.text();
+        console.log('Raw response:', responseText);
+
+        if (!responseText || responseText.trim() === '') {
+          throw new Error('Empty response body');
+        }
+
+        result = JSON.parse(responseText);
+      } catch (jsonError) {
+        console.error('JSON parsing error:', jsonError);
+        throw new Error(`Invalid JSON response: ${jsonError.message}`);
+      }
 
       if (!result.success) {
         throw new Error(result.message || 'Backend registration failed');
@@ -187,6 +220,12 @@ class AutoRegistrationService {
   async isUserRegistered(telegramId) {
     try {
       const response = await fetch(`/api/user/${telegramId}/status`);
+
+      if (!response.ok) {
+        console.error('HTTP Error checking registration:', response.status);
+        return false;
+      }
+
       const result = await response.json();
       return result.registered || false;
     } catch (error) {
