@@ -11,29 +11,75 @@ class TelegramWebAppService {
 
   // Initialize Telegram Web App
   init() {
+    // Check if running in Telegram Web App
     if (typeof window !== 'undefined' && window.Telegram && window.Telegram.WebApp) {
-      this.webApp = window.Telegram.WebApp;
-      this.initData = this.webApp.initData;
-      this.userData = this.webApp.initDataUnsafe?.user;
-      this.isInitialized = true;
+      try {
+        this.webApp = window.Telegram.WebApp;
+        this.initData = this.webApp.initData;
+        this.userData = this.webApp.initDataUnsafe?.user;
+        this.isInitialized = true;
 
-      // Expand the app to full screen
-      this.webApp.expand();
+        // Expand the app to full screen
+        if (this.webApp.expand) {
+          this.webApp.expand();
+        }
 
-      // Set header color
-      this.webApp.setHeaderColor('#1e40af');
+        // Set header color
+        if (this.webApp.setHeaderColor) {
+          this.webApp.setHeaderColor('#1e40af');
+        }
 
-      console.log('Telegram Web App initialized:', {
-        version: this.webApp.version,
-        platform: this.webApp.platform,
-        user: this.userData
-      });
+        console.log('Telegram Web App initialized:', {
+          version: this.webApp.version,
+          platform: this.webApp.platform,
+          user: this.userData
+        });
 
-      return true;
-    } else {
-      console.warn('Telegram Web App not available');
-      return false;
+        return true;
+      } catch (error) {
+        console.error('Error initializing Telegram Web App:', error);
+        return false;
+      }
     }
+
+    // Fallback for development/testing - simulate Telegram Web App
+    console.warn('Telegram Web App not available, using development mode');
+
+    // Create mock WebApp object for development
+    this.webApp = {
+      version: '6.0',
+      platform: 'development',
+      initData: '',
+      initDataUnsafe: {
+        user: {
+          id: 123456789,
+          username: 'test_user',
+          first_name: 'Test',
+          last_name: 'User',
+          language_code: 'en',
+          is_premium: false
+        }
+      },
+      expand: () => console.log('Mock expand called'),
+      setHeaderColor: (color) => console.log('Mock setHeaderColor called:', color),
+      showAlert: (message) => alert(message),
+      showConfirm: (message, callback) => {
+        const result = confirm(message);
+        callback(result);
+      },
+      close: () => console.log('Mock close called'),
+      HapticFeedback: {
+        impactOccurred: (type) => console.log('Mock haptic feedback:', type),
+        notificationOccurred: (type) => console.log('Mock notification feedback:', type),
+        selectionChanged: () => console.log('Mock selection changed')
+      }
+    };
+
+    this.initData = '';
+    this.userData = this.webApp.initDataUnsafe.user;
+    this.isInitialized = true;
+
+    return true;
   }
 
   // Get user data from Telegram
