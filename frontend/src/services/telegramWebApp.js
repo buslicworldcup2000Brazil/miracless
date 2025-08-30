@@ -323,12 +323,13 @@ class TelegramWebAppService {
       // Alert methods
       showAlert: (message) => {
         this.log('debug', 'Mock: showAlert() called', message);
-        alert(message);
+        window.alert(message);
       },
 
       showConfirm: (message, callback) => {
         this.log('debug', 'Mock: showConfirm() called', message);
-        const result = confirm(message);
+        // Use window.confirm to avoid ESLint restriction
+        const result = window.confirm(message);
         if (typeof callback === 'function') {
           callback(result);
         }
@@ -336,7 +337,8 @@ class TelegramWebAppService {
 
       showPopup: (params, callback) => {
         this.log('debug', 'Mock: showPopup() called', params);
-        const result = confirm(params.message || 'Confirm action?');
+        // Use window.confirm to avoid ESLint restriction
+        const result = window.confirm(params.message || 'Confirm action?');
         if (typeof callback === 'function') {
           callback({ button_id: result ? 'ok' : 'cancel' });
         }
@@ -580,13 +582,14 @@ class TelegramWebAppService {
         this.webApp.showAlert(message);
         this.log('debug', 'Telegram alert shown', { message });
       } else {
-        alert(message);
+        // Use window.alert to avoid ESLint restriction
+        window.alert(message);
         this.log('debug', 'Browser alert shown', { message });
       }
     } catch (error) {
       this.log('error', 'Error showing alert', error);
       // Fallback to browser alert
-      alert(message);
+      window.alert(message);
     }
   }
 
@@ -606,7 +609,8 @@ class TelegramWebAppService {
           }
         });
       } else {
-        const result = confirm(message);
+        // Use window.confirm to avoid ESLint restriction
+        const result = window.confirm(message);
         this.log('debug', 'Browser confirmation result', { result });
         if (typeof callback === 'function') {
           callback(result);
@@ -615,7 +619,7 @@ class TelegramWebAppService {
     } catch (error) {
       this.log('error', 'Error showing confirmation', error);
       // Fallback to browser confirm
-      const result = confirm(message);
+      const result = window.confirm(message);
       if (typeof callback === 'function') {
         callback(result);
       }
@@ -640,7 +644,8 @@ class TelegramWebAppService {
       } else {
         // Fallback to browser confirm
         const message = params.message || params.title || 'Confirm action?';
-        const result = confirm(message);
+        // Use window.confirm to avoid ESLint restriction
+        const result = window.confirm(message);
         if (typeof callback === 'function') {
           callback({ button_id: result ? 'ok' : 'cancel' });
         }
