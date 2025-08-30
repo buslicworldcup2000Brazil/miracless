@@ -191,24 +191,12 @@ function App() {
     );
   }
 
-  // Show error if not in Telegram and no mock data
-  if (!userData) {
-    return (
-      <div className="App">
-        <div className="error-screen">
-          <h2>Ошибка</h2>
-          <p>Приложение должно запускаться из Telegram</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="App">
       <main className="app-content">
         {activeTab === 'home' && (
           <div className="home-content">
-            <h1>Miracless Fart</h1>
+            <h1>Miracless</h1>
             <p>Your premium lottery experience</p>
             <div className="user-welcome">
               <p>Welcome, {userData.fullName}!</p>
