@@ -16,6 +16,7 @@ backend/build/
 # Firebase
 serviceAccountKey.json
 firebase-debug.log
+firestore-debug.log
 
 # IDE
 .vscode/
