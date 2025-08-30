@@ -1693,10 +1693,21 @@ p {
   padding: 20px;
 }
 
-.error-screen h2 {
+.error-content {
+  background: var(--secondary-black);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  max-width: 380px;
+  width: 100%;
+  box-shadow: var(--shadow-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.error-screen h1 {
   margin-bottom: 16px;
   font-size: 1.8rem;
   color: var(--accent-yellow);
+  text-shadow: var(--shadow-yellow);
 }
 
 .error-screen p {
@@ -1704,6 +1715,33 @@ p {
   color: var(--text-secondary);
   max-width: 300px;
   line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+.btn-retry {
+  background: var(--accent-yellow);
+  color: var(--primary-black);
+  border: none;
+  padding: 14px 28px;
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-yellow);
+}
+
+.btn-retry:hover:not(:disabled) {
+  background: var(--accent-yellow-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(251, 191, 36, 0.4);
+}
+
+.btn-retry:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 /* Statistics Styles */

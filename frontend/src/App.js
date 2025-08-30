@@ -16,23 +16,44 @@ import {
   ChartBarIcon
 } from '@heroicons/react/24/outline';
 
+// Error Screen Component
+const ErrorScreen = ({ message }) => (
+  <div className="App">
+    <div className="error-screen">
+      <div className="error-content">
+        <div className="error-icon">⚠️</div>
+        <h1>Ошибка</h1>
+        <p>{message}</p>
+        <button
+          className="btn-retry"
+          onClick={() => window.location.reload()}
+        >
+          Попробовать снова
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
 function App() {
   const [userData, setUserData] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
   const [isLoading, setIsLoading] = useState(true);
   const [showStartScreen, setShowStartScreen] = useState(false);
+  const [error, setError] = useState(null);
 
   // Initialize Telegram Web App and handle user registration
   useEffect(() => {
     const initializeApp = async () => {
       try {
         // Initialize Telegram Web App
-        const isInTelegram = telegramWebApp.init();
+        const isInTelegram = await telegramWebApp.init();
 
         if (!isInTelegram) {
           console.warn('App is not running in Telegram Web App');
           // Show error for production - no mock data allowed
+          setError('Приложение должно запускаться из Telegram222');
           setIsLoading(false);
           return;
         }
@@ -129,6 +150,11 @@ function App() {
         );
     }
   };
+
+  // Show error screen if there's an error
+  if (error) {
+    return <ErrorScreen message={error} />;
+  }
 
   // Show loading screen while initializing
   if (isLoading) {
