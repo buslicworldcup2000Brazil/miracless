@@ -1,17 +1,11 @@
 // Lottery scheduler for automatic completion
-const admin = require("firebase-admin");
+const { initializeFirebase } = require('./firebase');
 const notificationService = require('./notificationService');
 
 let db;
 try {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-    if (!admin.apps.length) {
-        admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount)
-        });
-    }
-    db = admin.firestore();
-    console.log("Firebase Firestore (Lottery Scheduler): Initialized.");
+    const { db: firestoreDb } = initializeFirebase();
+    db = firestoreDb;
 } catch (error) {
     console.error("Error initializing Firebase in lottery scheduler:", error);
     db = null;

@@ -4,7 +4,28 @@ const admin = require("firebase-admin");
 
 let db;
 try {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    // Parse Firebase service account JSON from environment variable
+    const serviceAccountJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+
+    if (!serviceAccountJson) {
+        throw new Error("GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable is not set");
+    }
+
+    let serviceAccount;
+    try {
+        serviceAccount = JSON.parse(serviceAccountJson);
+    } catch (parseError) {
+        throw new Error(`Failed to parse GOOGLE_APPLICATION_CREDENTIALS_JSON: ${parseError.message}`);
+    }
+
+    // Validate required fields
+    const requiredFields = ['type', 'project_id', 'private_key_id', 'private_key', 'client_email'];
+    const missingFields = requiredFields.filter(field => !serviceAccount[field]);
+
+    if (missingFields.length > 0) {
+        throw new Error(`Missing required fields in service account JSON: ${missingFields.join(', ')}`);
+    }
+
     if (!admin.apps.length) {
         admin.initializeApp({
             credential: admin.credential.cert(serviceAccount)

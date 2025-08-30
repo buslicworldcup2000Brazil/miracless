@@ -19,19 +19,46 @@ const RESTRICTED_ADMIN = "5206288199"; // Ограниченный админ
 const COINGECKO_API_KEY = "CG-7ZzjP5H5QkdkC78DXGU9mCpY";
 
 // --- Firebase Инициализация ---
+const admin = require("firebase-admin");
+const { getFirestore } = require("firebase-admin/firestore");
+
 let db;
 try {
-    const admin = require("firebase-admin");
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    // Parse Firebase service account JSON from environment variable
+    const serviceAccountJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+
+    if (!serviceAccountJson) {
+        throw new Error("GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable is not set");
+    }
+
+    let serviceAccount;
+    try {
+        serviceAccount = JSON.parse(serviceAccountJson);
+    } catch (parseError) {
+        throw new Error(`Failed to parse GOOGLE_APPLICATION_CREDENTIALS_JSON: ${parseError.message}`);
+    }
+
+    // Validate required fields
+    const requiredFields = ['type', 'project_id', 'private_key_id', 'private_key', 'client_email'];
+    const missingFields = requiredFields.filter(field => !serviceAccount[field]);
+
+    if (missingFields.length > 0) {
+        throw new Error(`Missing required fields in service account JSON: ${missingFields.join(', ')}`);
+    }
+
     if (!admin.apps.length) {
         admin.initializeApp({
             credential: admin.credential.cert(serviceAccount)
         });
+        console.log("Firebase Admin SDK initialized successfully");
     }
-    db = admin.firestore();
-    console.log("Firebase Firestore: Инициализировано успешно.");
+
+    // Get Firestore instance
+    db = getFirestore();
+    console.log("Firebase Firestore: Connected successfully.");
 } catch (error) {
     console.error("Ошибка инициализации Firebase:", error);
+    console.error("Please ensure GOOGLE_APPLICATION_CREDENTIALS_JSON is properly set");
     process.exit(1);
 }
 

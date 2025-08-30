@@ -6,13 +6,9 @@ const router = express.Router();
 
 let db;
 try {
-    const admin = require("firebase-admin");
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-    if (!admin.apps.length) {
-        admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-    }
-    db = admin.firestore();
-    console.log("Firebase Firestore (Deposit): OK");
+    const { initializeFirebase } = require('../src/firebase');
+    const { db: firestoreDb } = initializeFirebase();
+    db = firestoreDb;
 } catch (error) {
     console.error("Ошибка инициализации Firebase в Deposit:", error);
 }

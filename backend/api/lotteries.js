@@ -8,12 +8,9 @@ const notificationService = require('../src/notificationService');
 
 let db;
 try {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-    if (!admin.apps.length) {
-        admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-    }
-    db = admin.firestore();
-    console.log("Firebase Firestore (Serverless Lotteries): OK");
+    const { initializeFirebase } = require('../src/firebase');
+    const { db: firestoreDb } = initializeFirebase();
+    db = firestoreDb;
 } catch (error) {
     console.error("Ошибка инициализации Firebase в Serverless Lotteries:", error);
 }
