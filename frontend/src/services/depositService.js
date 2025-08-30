@@ -75,9 +75,14 @@ class DepositService {
       });
 
       if (response.ok) {
-        return await response.json();
+        const responseText = await response.text();
+        if (!responseText || responseText.trim() === '') {
+          console.warn('Empty response from transaction check API');
+          return { status: 'unknown', confirmations: 0 };
+        }
+        return JSON.parse(responseText);
       }
-      throw new Error('Failed to check transaction');
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     } catch (error) {
       console.error('Error checking transaction:', error);
       return { status: 'unknown', confirmations: 0 };

@@ -90,6 +90,7 @@ class AutoRegistrationService {
   async registerUserInBackend(userData) {
     try {
       console.log('Sending registration request to /api/auth...');
+      console.log('Request data:', userData);
 
       const response = await fetch('/api/auth', {
         method: 'POST',
@@ -111,6 +112,11 @@ class AutoRegistrationService {
 
       // Check if response has content
       const contentLength = response.headers.get('content-length');
+      const contentType = response.headers.get('content-type');
+
+      console.log('Content-Length:', contentLength);
+      console.log('Content-Type:', contentType);
+
       if (contentLength === '0') {
         console.error('Empty response from server');
         throw new Error('Server returned empty response');
@@ -126,7 +132,14 @@ class AutoRegistrationService {
           throw new Error('Empty response body');
         }
 
+        // Check if response is HTML (error page)
+        if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
+          console.error('Server returned HTML instead of JSON:', responseText.substring(0, 200));
+          throw new Error('Server returned HTML error page instead of JSON');
+        }
+
         result = JSON.parse(responseText);
+        console.log('Parsed JSON result:', result);
       } catch (jsonError) {
         console.error('JSON parsing error:', jsonError);
         throw new Error(`Invalid JSON response: ${jsonError.message}`);
@@ -226,7 +239,13 @@ class AutoRegistrationService {
         return false;
       }
 
-      const result = await response.json();
+      const responseText = await response.text();
+      if (!responseText || responseText.trim() === '') {
+        console.error('Empty response from user status API');
+        return false;
+      }
+
+      const result = JSON.parse(responseText);
       return result.registered || false;
     } catch (error) {
       console.error('Error checking registration status:', error);
