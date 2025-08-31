@@ -13,7 +13,12 @@ function initializeFirebase() {
         // Parse Firebase service account JSON from environment variable
         const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
 
+        console.log("🔍 Checking FIREBASE_SERVICE_ACCOUNT environment variable...");
+        console.log("📊 FIREBASE_SERVICE_ACCOUNT length:", serviceAccountJson ? serviceAccountJson.length : "undefined");
+
         if (!serviceAccountJson) {
+            console.error("❌ FIREBASE_SERVICE_ACCOUNT environment variable is not set");
+            console.error("💡 Make sure to set this variable in your deployment environment (Render)");
             throw new Error("FIREBASE_SERVICE_ACCOUNT environment variable is not set");
         }
 
