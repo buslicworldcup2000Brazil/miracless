@@ -26,14 +26,8 @@ const upload = multer({
 
 let db;
 try {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-    if (!admin.apps.length) {
-        admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount),
-            storageBucket: "miracless-fart-b8b04.firebasestorage.app"
-        });
-    }
-    db = admin.firestore();
+    const { db: firestoreDb } = require('../src/firebase').initializeFirebase();
+    db = firestoreDb;
     console.log("Firebase Firestore (Avatar Upload): OK");
 } catch (error) {
     console.error("Ошибка инициализации Firebase в Avatar Upload:", error);

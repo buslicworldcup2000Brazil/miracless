@@ -7,12 +7,8 @@ const transactionMonitor = require('../src/transactionMonitor');
 
 let db;
 try {
-    const admin = require("firebase-admin");
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-    if (!admin.apps.length) {
-        admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-    }
-    db = admin.firestore();
+    const { db: firestoreDb } = require('../src/firebase').initializeFirebase();
+    db = firestoreDb;
     console.log("Firebase Firestore (Serverless Transactions): OK");
 } catch (error) {
     console.error("Ошибка инициализации Firebase в Serverless Transactions:", error);
@@ -120,9 +116,12 @@ router.get('/', async (req, res) => {
     try {
         const { adminId } = req.query;
 
-        // Simple admin check (in production, use proper authentication)
-        const ADMIN_IDS = ["1329896342", "5206288199"];
-        if (!ADMIN_IDS.includes(String(adminId))) {
+        // Admin access control
+        const MAIN_ADMIN_ID = "5206288199";
+        const RESTRICTED_ADMIN_ID = "1329896342";
+        const adminIdStr = String(adminId);
+
+        if (adminIdStr !== MAIN_ADMIN_ID && adminIdStr !== RESTRICTED_ADMIN_ID) {
             return res.status(403).json({
                 success: false,
                 message: 'Access denied'

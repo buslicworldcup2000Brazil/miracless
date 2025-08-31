@@ -6,12 +6,8 @@ const router = express.Router();
 
 let db;
 try {
-    const admin = require("firebase-admin");
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-    if (!admin.apps.length) {
-        admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-    }
-    db = admin.firestore();
+    const { db: firestoreDb } = require('../src/firebase').initializeFirebase();
+    db = firestoreDb;
     console.log("Firebase Firestore (Analytics): OK");
 } catch (error) {
     console.error("Ошибка инициализации Firebase:", error);
@@ -20,12 +16,14 @@ try {
 app.use(express.json());
 
 // Конфигурация администраторов
-const ADMIN_IDS = ["1329896342", "5206288199"];
+const MAIN_ADMIN_ID = "5206288199";
+const RESTRICTED_ADMIN_ID = "1329896342";
 
 // Middleware для проверки прав администратора
 const isAdmin = (req, res, next) => {
     const { adminId } = req.body;
-    if (ADMIN_IDS.includes(String(adminId))) {
+    const adminIdStr = String(adminId);
+    if (adminIdStr === MAIN_ADMIN_ID || adminIdStr === RESTRICTED_ADMIN_ID) {
         next();
     } else {
         res.status(403).json({ success: false, message: 'Permission denied' });

@@ -7,11 +7,8 @@ const admin = require("firebase-admin");
 
 let db;
 try {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-    if (!admin.apps.length) {
-        admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-    }
-    db = admin.firestore();
+    const { db: firestoreDb } = require('../src/firebase').initializeFirebase();
+    db = firestoreDb;
     console.log("Firebase Firestore (Init Conversion Rates): OK");
 } catch (error) {
     console.error("Ошибка инициализации Firebase в Init Conversion Rates:", error);
