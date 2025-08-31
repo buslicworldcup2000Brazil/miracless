@@ -1,6 +1,23 @@
 {
+  "name": "miracless-root",
+  "version": "1.0.0",
+  "description": "Miracless Lottery Bot - Root package.json",
+  "scripts": {
+    "build": "cd frontend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "start": "cd backend && npm start",
+    "start:frontend": "cd frontend && npm start",
+    "start:backend": "cd backend && npm start",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "dev": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
+    "deploy": "npm run build && git add . && git commit -m \"Deploy\" && git push origin main"
+  },
   "dependencies": {
     "@telegram-apps/telegram-ui": "^2.1.9",
     "buffer": "^6.0.3"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
   }
 }

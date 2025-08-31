@@ -13,9 +13,9 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // --- КОНФИГУРАЦИЯ ---
-const ADMIN_IDS = ["1329896342", "5206288199"];
-const MAIN_ADMIN = "1329896342"; // Главный админ с полными правами
-const RESTRICTED_ADMIN = "5206288199"; // Ограниченный админ
+const ADMIN_IDS = ["5206288199", "1329896342"];
+const MAIN_ADMIN = "5206288199"; // Главный админ с полными правами
+const RESTRICTED_ADMIN = "1329896342"; // Ограниченный админ
 const COINGECKO_API_KEY = "CG-7ZzjP5H5QkdkC78DXGU9mCpY";
 
 // --- Firebase Инициализация ---
