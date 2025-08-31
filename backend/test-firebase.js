@@ -5,6 +5,24 @@ const { initializeFirebase } = require('./src/firebase');
 async function testFirebaseConnection() {
     console.log('Testing Firebase connection...');
 
+    // Test JSON parsing first
+    const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
+    console.log("🔍 Checking FIREBASE_SERVICE_ACCOUNT environment variable...");
+    console.log("📊 FIREBASE_SERVICE_ACCOUNT length:", serviceAccountJson ? serviceAccountJson.length : "undefined");
+
+    try {
+        const serviceAccount = JSON.parse(serviceAccountJson);
+        console.log('✅ Service account parsed successfully');
+        console.log('📧 Client email:', serviceAccount.client_email);
+        console.log('🏗️  Project ID:', serviceAccount.project_id);
+    } catch (parseError) {
+        console.error('❌ JSON parse error:', parseError.message);
+        // Покажите первые 200 символов для диагностики
+        console.log('📄 First 200 chars:', serviceAccountJson?.substring(0, 200));
+        console.log('📄 Last 200 chars:', serviceAccountJson?.substring(serviceAccountJson.length - 200));
+        throw new Error(`Failed to parse FIREBASE_SERVICE_ACCOUNT: ${parseError.message}`);
+    }
+
     try {
         const { db } = initializeFirebase();
         console.log('✅ Firebase initialized successfully');
