@@ -61,7 +61,7 @@ const Admin = () => {
         setLotteries(data);
 
         // Set admin level
-        const adminId = "1329896342"; // In production, get from auth context
+        const adminId = "5206288199"; // Main admin ID for production
         setAdminLevel(determineAdminLevel(adminId));
       } catch (error) {
         console.error('Error loading lotteries:', error);
@@ -78,7 +78,7 @@ const Admin = () => {
   const loadAnalytics = async () => {
     try {
       setAnalyticsLoading(true);
-      const adminId = "1329896342"; // In production, get from auth context
+      const adminId = "5206288199"; // Main admin ID for production
       const data = await analyticsService.getAnalytics(adminId);
       setAnalytics(data);
     } catch (error) {
@@ -100,7 +100,7 @@ const Admin = () => {
   const loadAdminLogs = async (searchQuery = '') => {
     try {
       setLogsLoading(true);
-      const adminId = "1329896342"; // In production, get from auth context
+      const adminId = "5206288199"; // Main admin ID for production
       let logs;
 
       if (searchQuery.trim()) {
@@ -130,7 +130,7 @@ const Admin = () => {
   const loadDetailedStats = async () => {
     try {
       setStatsLoading(true);
-      const adminId = "1329896342"; // In production, get from auth context
+      const adminId = "5206288199"; // Main admin ID for production
       const data = await analyticsService.getAnalytics(adminId);
       setDetailedStats(data);
     } catch (error) {
@@ -181,7 +181,7 @@ const Admin = () => {
     e.preventDefault();
 
     try {
-      const adminId = "1329896342"; // In production, get from auth context
+      const adminId = "5206288199"; // Main admin ID for production
 
       if (editingLottery) {
         // Update existing lottery
@@ -236,7 +236,7 @@ const Admin = () => {
     }
 
     try {
-      const adminId = "1329896342"; // In production, get from auth context
+      const adminId = "5206288199"; // Main admin ID for production
       await lotteryService.deleteLottery(lotteryId, adminId);
 
       // Reload lotteries
@@ -263,7 +263,7 @@ const Admin = () => {
     }
 
     try {
-      const adminId = "1329896342"; // In production, get from auth context
+      const adminId = "5206288199"; // Main admin ID for production
       await lotteryService.selectWinner(selectedLotteryForWinner.id, selectedWinner, adminId);
 
       // Reload lotteries
@@ -309,7 +309,7 @@ const Admin = () => {
     }
 
     try {
-      const adminId = "1329896342"; // In production, get from auth context
+      const adminId = "5206288199"; // Main admin ID for production
       await lotteryService.addParticipant(selectedLottery, manualUserId.trim(), adminId);
 
       // Reload lotteries
@@ -338,7 +338,7 @@ const Admin = () => {
     }
 
     try {
-      const adminId = "1329896342"; // In production, get from auth context
+      const adminId = "5206288199"; // Main admin ID for production
       await lotteryService.completeLotteryManually(lotteryId, adminId);
 
       // Reload lotteries
