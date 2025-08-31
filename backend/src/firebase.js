@@ -9,17 +9,17 @@ const { getFirestore } = require("firebase-admin/firestore");
 function initializeFirebase() {
     try {
         // Parse Firebase service account JSON from environment variable
-        const serviceAccountJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+        const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
 
         if (!serviceAccountJson) {
-            throw new Error("GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable is not set");
+            throw new Error("FIREBASE_SERVICE_ACCOUNT environment variable is not set");
         }
 
         let serviceAccount;
         try {
             serviceAccount = JSON.parse(serviceAccountJson);
         } catch (parseError) {
-            throw new Error(`Failed to parse GOOGLE_APPLICATION_CREDENTIALS_JSON: ${parseError.message}`);
+            throw new Error(`Failed to parse FIREBASE_SERVICE_ACCOUNT: ${parseError.message}`);
         }
 
         // Validate required fields

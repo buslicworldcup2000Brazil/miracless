@@ -6,12 +6,8 @@ const router = express.Router();
 
 let db;
 try {
-    const admin = require("firebase-admin");
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-    if (!admin.apps.length) {
-        admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-    }
-    db = admin.firestore();
+    const { db: firestoreDb } = require('../src/firebase').initializeFirebase();
+    db = firestoreDb;
     console.log("Firebase Firestore (Serverless Admin Logs): OK");
 } catch (error) {
     console.error("Ошибка инициализации Firebase в Serverless Admin Logs:", error);

@@ -22,6 +22,8 @@
    FIREBASE_SERVICE_ACCOUNT=<ваш_firebase_service_account_json>
    ```
 
+   **Важно:** Используйте переменную `FIREBASE_SERVICE_ACCOUNT`, а не `GOOGLE_APPLICATION_CREDENTIALS_JSON`. JSON должен быть корректно экранирован и парсится через `JSON.parse()`.
+
 4. **Firebase настройка:**
    - Создайте проект в Firebase Console
    - Включите Firestore Database
