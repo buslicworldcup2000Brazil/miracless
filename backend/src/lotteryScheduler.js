@@ -3,12 +3,17 @@ const { initializeFirebase } = require('./firebase');
 const notificationService = require('./notificationService');
 
 let db;
+let firebaseAvailable = false;
 try {
     const { db: firestoreDb } = initializeFirebase();
     db = firestoreDb;
+    firebaseAvailable = true;
+    console.log("✅ Firebase available in lottery scheduler");
 } catch (error) {
-    console.error("Error initializing Firebase in lottery scheduler:", error);
+    console.error("❌ Firebase not available in lottery scheduler:", error.message);
+    console.log("🔄 Running in offline mode - scheduler disabled");
     db = null;
+    firebaseAvailable = false;
 }
 
 class LotteryScheduler {
@@ -45,8 +50,8 @@ class LotteryScheduler {
 
     // Check for expired lotteries
     async checkExpiredLotteries() {
-        if (!db) {
-            console.error('Database not initialized in lottery scheduler');
+        if (!firebaseAvailable || !db) {
+            console.log('🔄 Firebase not available - skipping expired lotteries check');
             return;
         }
 
@@ -74,6 +79,11 @@ class LotteryScheduler {
 
     // Complete a lottery
     async completeLottery(lottery) {
+        if (!firebaseAvailable || !db) {
+            console.log('🔄 Firebase not available - cannot complete lottery');
+            return;
+        }
+
         try {
             console.log(`Completing lottery ${lottery.id}: ${lottery.title}`);
 
@@ -137,6 +147,11 @@ class LotteryScheduler {
 
     // Send new lottery notifications
     async sendNewLotteryNotifications(lottery) {
+        if (!firebaseAvailable || !db) {
+            console.log('🔄 Firebase not available - skipping new lottery notifications');
+            return;
+        }
+
         try {
             // Get all users who have participated in lotteries before (potential subscribers)
             const usersSnapshot = await db.collection('users').get();
@@ -162,7 +177,10 @@ class LotteryScheduler {
 
     // Check for lotteries that need status updates
     async checkLotteryStatusUpdates() {
-        if (!db) return;
+        if (!firebaseAvailable || !db) {
+            console.log('🔄 Firebase not available - skipping lottery status updates check');
+            return;
+        }
 
         try {
             const now = new Date();
@@ -212,7 +230,10 @@ class LotteryScheduler {
 
     // Handle lottery cancellation
     async cancelLottery(lotteryId, reason = 'Admin cancelled') {
-        if (!db) return false;
+        if (!firebaseAvailable || !db) {
+            console.log('🔄 Firebase not available - cannot cancel lottery');
+            return false;
+        }
 
         try {
             const lotteryRef = db.collection('lotteries').doc(lotteryId);
@@ -287,7 +308,10 @@ class LotteryScheduler {
 
     // Extend lottery duration
     async extendLottery(lotteryId, additionalHours) {
-        if (!db) return false;
+        if (!firebaseAvailable || !db) {
+            console.log('🔄 Firebase not available - cannot extend lottery');
+            return false;
+        }
 
         try {
             const lotteryRef = db.collection('lotteries').doc(lotteryId);
@@ -340,6 +364,11 @@ class LotteryScheduler {
 
     // Send reminder notifications (24 hours before lottery ends)
     async sendReminderNotifications() {
+        if (!firebaseAvailable || !db) {
+            console.log('🔄 Firebase not available - skipping reminder notifications');
+            return;
+        }
+
         try {
             const now = new Date();
             const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
@@ -366,7 +395,10 @@ class LotteryScheduler {
 
     // Manual completion trigger (for admin use)
     async completeLotteryManually(lotteryId) {
-        if (!db) return false;
+        if (!firebaseAvailable || !db) {
+            console.log('🔄 Firebase not available - cannot complete lottery manually');
+            return false;
+        }
 
         try {
             const lotteryDoc = await db.collection('lotteries').doc(lotteryId).get();
