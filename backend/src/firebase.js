@@ -1,4 +1,6 @@
 // Firebase Admin SDK initialization utility
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, "../../.env") });
 const admin = require("firebase-admin");
 const { getFirestore } = require("firebase-admin/firestore");
 
@@ -33,9 +35,10 @@ function initializeFirebase() {
         // Initialize Firebase Admin SDK if not already initialized
         if (!admin.apps.length) {
             admin.initializeApp({
-                credential: admin.credential.cert(serviceAccount)
+                credential: admin.credential.cert(serviceAccount),
+                projectId: serviceAccount.project_id
             });
-            console.log("Firebase Admin SDK initialized successfully");
+            console.log("Firebase Admin SDK initialized successfully for project:", serviceAccount.project_id);
         }
 
         // Get Firestore instance

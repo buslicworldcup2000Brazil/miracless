@@ -45,11 +45,16 @@ class LotteryScheduler {
 
     // Check for expired lotteries
     async checkExpiredLotteries() {
-        if (!db) return;
+        if (!db) {
+            console.error('Database not initialized in lottery scheduler');
+            return;
+        }
 
         try {
             const now = new Date();
             const lotteriesRef = db.collection('lotteries');
+
+            console.log('Checking for expired lotteries at:', now.toISOString());
 
             // Find active lotteries that have expired
             const expiredLotteries = await lotteriesRef
