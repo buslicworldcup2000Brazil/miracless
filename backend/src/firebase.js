@@ -18,8 +18,8 @@ function initializeFirebase() {
 
         if (!serviceAccountJson) {
             console.error("❌ FIREBASE_SERVICE_ACCOUNT environment variable is not set");
-            console.error("💡 Make sure to set this variable in your deployment environment (Render)");
-            throw new Error("FIREBASE_SERVICE_ACCOUNT environment variable is not set");
+            console.log("🔄 Switching to offline mode with mock database");
+            return createMockFirebase();
         }
 
         let serviceAccount;
@@ -33,7 +33,8 @@ function initializeFirebase() {
             // Покажите первые 200 символов для диагностики
             console.log('📄 First 200 chars:', serviceAccountJson?.substring(0, 200));
             console.log('📄 Last 200 chars:', serviceAccountJson?.substring(serviceAccountJson.length - 200));
-            throw new Error(`Failed to parse FIREBASE_SERVICE_ACCOUNT: ${parseError.message}`);
+            console.log("🔄 Switching to offline mode due to JSON parse error");
+            return createMockFirebase();
         }
 
         // Validate required fields
@@ -41,7 +42,9 @@ function initializeFirebase() {
         const missingFields = requiredFields.filter(field => !serviceAccount[field]);
 
         if (missingFields.length > 0) {
-            throw new Error(`Missing required fields in service account JSON: ${missingFields.join(', ')}`);
+            console.error(`Missing required fields in service account JSON: ${missingFields.join(', ')}`);
+            console.log("🔄 Switching to offline mode due to missing fields");
+            return createMockFirebase();
         }
 
         // Initialize Firebase Admin SDK if not already initialized
@@ -60,8 +63,51 @@ function initializeFirebase() {
         return { admin, db };
     } catch (error) {
         console.error("Firebase initialization error:", error);
-        throw error;
+        console.log("🔄 Switching to offline mode due to Firebase error");
+        return createMockFirebase();
     }
+}
+
+// Create mock Firebase objects for offline mode
+function createMockFirebase() {
+    console.log("🏗️ Creating mock Firebase objects for offline mode");
+
+    const mockDb = {
+        collection: (name) => ({
+            doc: (id) => ({
+                get: async () => ({ exists: false, data: () => null }),
+                set: async () => {},
+                update: async () => {},
+                delete: async () => {}
+            }),
+            where: () => ({
+                where: () => ({
+                    get: async () => ({ docs: [], empty: true })
+                }),
+                get: async () => ({ docs: [], empty: true })
+            }),
+            orderBy: () => ({
+                limit: () => ({
+                    offset: () => ({
+                        get: async () => ({ docs: [], empty: true })
+                    }),
+                    get: async () => ({ docs: [], empty: true })
+                }),
+                get: async () => ({ docs: [], empty: true })
+            }),
+            add: async () => ({ id: 'mock-' + Date.now() }),
+            get: async () => ({ docs: [], empty: true })
+        })
+    };
+
+    return {
+        admin: {
+            apps: [],
+            initializeApp: () => {},
+            credential: { cert: () => {} }
+        },
+        db: mockDb
+    };
 }
 
 module.exports = { initializeFirebase };

@@ -1,0 +1,147 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String   @id @default(cuid())
+  telegramId        String   @unique
+  username          String?
+  firstName         String?
+  lastName          String?
+  languageCode      String?  @default("en")
+  avatarUrl         String?
+  isPremium         Boolean  @default(false)
+  registrationSource String? @default("unknown")
+  registrationTimestamp DateTime @default(now())
+  uniqueId          String   @unique
+  balance           Float    @default(0)
+  createdAt         DateTime @default(now())
+  lastSeen          DateTime @updatedAt
+  isActive          Boolean  @default(true)
+
+  // Relations
+  participations    LotteryParticipation[]
+  transactions      Transaction[]
+
+  @@map("users")
+}
+
+model Lottery {
+  id              String   @id @default(cuid())
+  title           String
+  description     String?
+  participationCost Float
+  maxParticipants Int
+  endDate         DateTime
+  status          LotteryStatus @default(ACTIVE)
+  winnerId        String?
+  completedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  prizes          Prize[]
+  participations  LotteryParticipation[]
+
+  @@map("lotteries")
+}
+
+model Prize {
+  id        String  @id @default(cuid())
+  lotteryId String
+  place     Int
+  amount    Float
+  type      PrizeType @default(FIXED)
+
+  // Relations
+  lottery   Lottery @relation(fields: [lotteryId], references: [id], onDelete: Cascade)
+
+  @@map("prizes")
+}
+
+model LotteryParticipation {
+  id        String  @id @default(cuid())
+  lotteryId String
+  userId    String
+  joinedAt  DateTime @default(now())
+
+  // Relations
+  lottery   Lottery @relation(fields: [lotteryId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([lotteryId, userId])
+  @@map("lottery_participations")
+}
+
+model Transaction {
+  id            String  @id @default(cuid())
+  userId        String
+  type          TransactionType
+  amount        Float
+  usdAmount     Float?
+  description   String?
+  status        TransactionStatus @default(PENDING)
+  processedAt   DateTime?
+  createdAt     DateTime @default(now())
+
+  // Relations
+  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("transactions")
+}
+
+model AdminLog {
+  id        String  @id @default(cuid())
+  adminId   String
+  action    String
+  details   String?
+  timestamp DateTime @default(now())
+
+  @@map("admin_logs")
+}
+
+model FakeUser {
+  id        String  @id @default(cuid())
+  nickname  String
+  avatar    String?
+  balance   Float   @default(0)
+  isFake    Boolean @default(true)
+  createdAt DateTime @default(now())
+  createdBy String?
+
+  @@map("fake_users")
+}
+
+enum LotteryStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum PrizeType {
+  FIXED
+  PERCENTAGE
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  LOTTERY_ENTRY
+  LOTTERY_WIN
+  ADMIN_ADJUSTMENT
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+}

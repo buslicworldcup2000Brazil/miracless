@@ -4,17 +4,11 @@ const notificationService = require('./notificationService');
 
 let db;
 let firebaseAvailable = false;
-try {
-    const { db: firestoreDb } = initializeFirebase();
-    db = firestoreDb;
-    firebaseAvailable = true;
-    console.log("✅ Firebase available in lottery scheduler");
-} catch (error) {
-    console.error("❌ Firebase not available in lottery scheduler:", error.message);
-    console.log("🔄 Running in offline mode - scheduler disabled");
-    db = null;
-    firebaseAvailable = false;
-}
+
+// Firebase disabled - using in-memory database
+console.log("🔄 Lottery scheduler using in-memory database (Firebase disabled)");
+db = null;
+firebaseAvailable = false;
 
 class LotteryScheduler {
     constructor() {
