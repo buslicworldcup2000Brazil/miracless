@@ -62,12 +62,12 @@ router.post('/', async (req, res) => {
     try {
         const { adminId, nickname, avatar, balance } = req.body;
 
-        // Simple admin check
-        const ADMIN_IDS = ["1329896342", "5206288199"];
-        if (!ADMIN_IDS.includes(String(adminId))) {
+        // Admin access control - only main admin can manage fake users
+        const MAIN_ADMIN_ID = "5206288199";
+        if (String(adminId) !== MAIN_ADMIN_ID) {
             return res.status(403).json({
                 success: false,
-                message: 'Access denied'
+                message: 'Main admin access required'
             });
         }
 
@@ -112,12 +112,12 @@ router.post('/bulk', async (req, res) => {
     try {
         const { adminId, count } = req.body;
 
-        // Simple admin check
-        const ADMIN_IDS = ["1329896342", "5206288199"];
-        if (!ADMIN_IDS.includes(String(adminId))) {
+        // Admin access control - only main admin can manage fake users
+        const MAIN_ADMIN_ID = "5206288199";
+        if (String(adminId) !== MAIN_ADMIN_ID) {
             return res.status(403).json({
                 success: false,
-                message: 'Access denied'
+                message: 'Main admin access required'
             });
         }
 
@@ -175,12 +175,12 @@ router.delete('/:id', async (req, res) => {
         const { id } = req.params;
         const { adminId } = req.body;
 
-        // Simple admin check
-        const ADMIN_IDS = ["1329896342", "5206288199"];
-        if (!ADMIN_IDS.includes(String(adminId))) {
+        // Admin access control - only main admin can manage fake users
+        const MAIN_ADMIN_ID = "5206288199";
+        if (String(adminId) !== MAIN_ADMIN_ID) {
             return res.status(403).json({
                 success: false,
-                message: 'Access denied'
+                message: 'Main admin access required'
             });
         }
 

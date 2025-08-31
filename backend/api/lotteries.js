@@ -22,8 +22,8 @@ const ADMIN_IDS = ["1329896342", "5206288199"];
 
 // --- HELPER FUNCTIONS ---
 const getAdminLevel = (adminId) => {
-    if (adminId === "1329896342") return 'main'; // Главный админ
-    if (adminId === "5206288199") return 'restricted'; // Ограниченный админ
+    if (adminId === "5206288199") return 'main'; // Главный админ
+    if (adminId === "1329896342") return 'restricted'; // Ограниченный админ
     return null;
 };
 
@@ -41,7 +41,7 @@ const isAdmin = (req, res, next) => {
 // --- MIDDLEWARE isMainAdmin ---
 const isMainAdmin = (req, res, next) => {
     const { adminId } = req.body;
-    if (adminId === "1329896342") { // Главный админ
+    if (adminId === "5206288199") { // Главный админ
         next();
     } else {
         res.status(403).json({ success: false, message: 'Main admin access required' });

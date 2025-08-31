@@ -24,14 +24,19 @@ router.get('/', async (req, res) => {
     try {
         const { adminId, limit = 50, offset = 0 } = req.query;
 
-        // Simple admin check (in production, use proper authentication)
-        const ADMIN_IDS = ["1329896342", "5206288199"];
-        if (!ADMIN_IDS.includes(String(adminId))) {
+        // Admin access control
+        const MAIN_ADMIN_ID = "5206288199";
+        const RESTRICTED_ADMIN_ID = "1329896342";
+        const adminIdStr = String(adminId);
+
+        if (adminIdStr !== MAIN_ADMIN_ID && adminIdStr !== RESTRICTED_ADMIN_ID) {
             return res.status(403).json({
                 success: false,
                 message: 'Access denied'
             });
         }
+
+        const isMainAdmin = adminIdStr === MAIN_ADMIN_ID;
 
         // Get logs with pagination
         const logsQuery = db.collection('admin_logs')
@@ -76,14 +81,19 @@ router.get('/admin/:targetAdminId', async (req, res) => {
         const { adminId } = req.query;
         const { targetAdminId } = req.params;
 
-        // Simple admin check
-        const ADMIN_IDS = ["1329896342", "5206288199"];
-        if (!ADMIN_IDS.includes(String(adminId))) {
+        // Admin access control
+        const MAIN_ADMIN_ID = "5206288199";
+        const RESTRICTED_ADMIN_ID = "1329896342";
+        const adminIdStr = String(adminId);
+
+        if (adminIdStr !== MAIN_ADMIN_ID && adminIdStr !== RESTRICTED_ADMIN_ID) {
             return res.status(403).json({
                 success: false,
                 message: 'Access denied'
             });
         }
+
+        const isMainAdmin = adminIdStr === MAIN_ADMIN_ID;
 
         const logsQuery = db.collection('admin_logs')
             .where('adminId', '==', targetAdminId)
@@ -116,14 +126,19 @@ router.get('/search', async (req, res) => {
     try {
         const { adminId, query, limit = 20 } = req.query;
 
-        // Simple admin check
-        const ADMIN_IDS = ["1329896342", "5206288199"];
-        if (!ADMIN_IDS.includes(String(adminId))) {
+        // Admin access control
+        const MAIN_ADMIN_ID = "5206288199";
+        const RESTRICTED_ADMIN_ID = "1329896342";
+        const adminIdStr = String(adminId);
+
+        if (adminIdStr !== MAIN_ADMIN_ID && adminIdStr !== RESTRICTED_ADMIN_ID) {
             return res.status(403).json({
                 success: false,
                 message: 'Access denied'
             });
         }
+
+        const isMainAdmin = adminIdStr === MAIN_ADMIN_ID;
 
         // Simple search implementation
         const logsSnapshot = await db.collection('admin_logs')

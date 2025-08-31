@@ -47,8 +47,8 @@ const Admin = () => {
 
   // Determine admin level
   const determineAdminLevel = (adminId) => {
-    if (adminId === "1329896342") return 'main';
-    if (adminId === "5206288199") return 'restricted';
+    if (adminId === "5206288199") return 'main';
+    if (adminId === "1329896342") return 'restricted';
     return null;
   };
 
