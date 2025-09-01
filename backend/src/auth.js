@@ -11,6 +11,9 @@ try {
 }
 
 const authenticateUser = async (req, res) => {
+    console.log('🔐 [AUTH] НАЧАЛО АУТЕНТИФИКАЦИИ ПОЛЬЗОВАТЕЛЯ');
+    console.log('📥 [AUTH] Полученные данные:', JSON.stringify(req.body, null, 2));
+
     try {
         const {
             telegram_id,
@@ -25,15 +28,20 @@ const authenticateUser = async (req, res) => {
             unique_id
         } = req.body;
 
+        console.log('🆔 [AUTH] Telegram ID:', telegram_id);
+
         if (!telegram_id) {
+            console.error('❌ [AUTH] ОТСУТСТВУЕТ TELEGRAM ID');
             return res.status(400).json({ success: false, message: 'Telegram ID is required' });
         }
 
+        console.log('🔍 [AUTH] Проверка существования пользователя в БД...');
         const userRef = db.collection('users').doc(String(telegram_id));
         const doc = await userRef.get();
 
         let user;
         if (!doc.exists) {
+            console.log('👤 [AUTH] ПОЛЬЗОВАТЕЛЬ НЕ НАЙДЕН - СОЗДАЕМ НОВОГО');
             // Создаем нового пользователя с расширенными данными
             user = {
                 telegram_id: String(telegram_id),
@@ -56,9 +64,11 @@ const authenticateUser = async (req, res) => {
                     currency: 'USD'
                 }
             };
+            console.log('💾 [AUTH] Сохранение нового пользователя в БД...');
             await userRef.set(user);
-            console.log(`New user registered: ${telegram_id} (${first_name} ${last_name})`);
+            console.log(`✅ [AUTH] НОВЫЙ ПОЛЬЗОВАТЕЛЬ ЗАРЕГИСТРИРОВАН: ${telegram_id} (${first_name} ${last_name})`);
         } else {
+            console.log('👤 [AUTH] ПОЛЬЗОВАТЕЛЬ УЖЕ СУЩЕСТВУЕТ - ОБНОВЛЯЕМ ДАННЫЕ');
             // Обновляем данные существующего пользователя
             user = doc.data();
             const updateData = {
@@ -77,15 +87,46 @@ const authenticateUser = async (req, res) => {
             if (is_premium !== undefined && is_premium !== user.is_premium) updateData.is_premium = is_premium;
 
             if (Object.keys(updateData).length > 1) { // больше чем только last_seen
+                console.log('💾 [AUTH] Обновление данных пользователя...');
                 await userRef.update(updateData);
                 user = { ...user, ...updateData };
+                console.log('✅ [AUTH] Данные пользователя обновлены');
+            } else {
+                console.log('📋 [AUTH] Данные пользователя не изменились');
             }
         }
 
+        console.log('📤 [AUTH] Отправка успешного ответа клиенту...');
+        console.log('👤 [AUTH] Финальные данные пользователя:', {
+            telegram_id: user.telegram_id,
+            username: user.username,
+            first_name: user.first_name,
+            balance: user.balance,
+            is_premium: user.is_premium
+        });
+
         res.json({ success: true, user });
+        console.log('✅ [AUTH] АУТЕНТИФИКАЦИЯ ЗАВЕРШЕНА УСПЕШНО');
     } catch (error) {
-        console.error("Ошибка аутентификации:", error);
+        console.error('💥 [AUTH] КРИТИЧЕСКАЯ ОШИБКА АУТЕНТИФИКАЦИИ:', error);
+        console.error('🔍 [AUTH] Детали ошибки:', {
+            message: error.message,
+            stack: error.stack,
+            code: error.code,
+            telegram_id: req.body?.telegram_id
+        });
+
+        // Проверяем тип ошибки
+        if (error.code === 'PERMISSION_DENIED') {
+            console.error('🔐 [AUTH] Ошибка доступа к Firebase');
+        } else if (error.code === 'UNAVAILABLE') {
+            console.error('🌐 [AUTH] Firebase недоступен');
+        } else if (error.code === 'DEADLINE_EXCEEDED') {
+            console.error('⏰ [AUTH] Превышено время ожидания Firebase');
+        }
+
         res.status(500).json({ success: false, message: "Internal Server Error" });
+        console.log('❌ [AUTH] ОТПРАВЛЕН ОТВЕТ ОБ ОШИБКЕ КЛИЕНТУ');
     }
 };
 

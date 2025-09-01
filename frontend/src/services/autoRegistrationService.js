@@ -88,9 +88,12 @@ class AutoRegistrationService {
 
   // Register user in backend
   async registerUserInBackend(userData) {
+    console.log('🚀 [AUTO-REG] НАЧАЛО РЕГИСТРАЦИИ В БЭКЕНДЕ');
+    console.log('📤 [AUTO-REG] Отправляемые данные:', JSON.stringify(userData, null, 2));
+
     try {
-      console.log('Sending registration request to /api/auth...');
-      console.log('Request data:', userData);
+      console.log('🌐 [AUTO-REG] Отправка POST запроса на /api/auth...');
+      console.log('🔗 [AUTO-REG] URL:', window.location.origin + '/api/auth');
 
       const response = await fetch('/api/auth', {
         method: 'POST',
@@ -100,13 +103,13 @@ class AutoRegistrationService {
         body: JSON.stringify(userData)
       });
 
-      console.log('Response status:', response.status);
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+      console.log('📊 [AUTO-REG] Статус ответа:', response.status);
+      console.log('📋 [AUTO-REG] Заголовки ответа:', Object.fromEntries(response.headers.entries()));
 
       // Check if response is ok
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('HTTP Error:', response.status, errorText);
+        console.error('❌ [AUTO-REG] HTTP Ошибка:', response.status, errorText);
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
@@ -114,11 +117,15 @@ class AutoRegistrationService {
       const contentLength = response.headers.get('content-length');
       const contentType = response.headers.get('content-type');
 
-      console.log('Content-Length:', contentLength);
-      console.log('Content-Type:', contentType);
+      console.log('📏 [AUTO-REG] Content-Length:', contentLength);
+      console.log('🏷️ [AUTO-REG] Content-Type:', contentType);
 
       if (contentLength === '0') {
-        console.error('Empty response from server');
+        console.error('❌ [AUTO-REG] ПУСТОЙ ОТВЕТ ОТ СЕРВЕРА');
+        console.error('🔍 [AUTO-REG] Возможные причины:');
+        console.error('   - Бэкенд не запущен');
+        console.error('   - База данных не подключена');
+        console.error('   - Ошибка в коде бэкенда');
         throw new Error('Server returned empty response');
       }
 
@@ -126,32 +133,45 @@ class AutoRegistrationService {
       let result;
       try {
         const responseText = await response.text();
-        console.log('Raw response:', responseText);
+        console.log('📄 [AUTO-REG] Полный текст ответа:', responseText);
 
         if (!responseText || responseText.trim() === '') {
+          console.error('❌ [AUTO-REG] ПУСТАЯ СТРОКА В ОТВЕТЕ');
           throw new Error('Empty response body');
         }
 
         // Check if response is HTML (error page)
         if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
-          console.error('Server returned HTML instead of JSON:', responseText.substring(0, 200));
+          console.error('❌ [AUTO-REG] СЕРВЕР ВЕРНУЛ HTML ВМЕСТО JSON:');
+          console.error(responseText.substring(0, 500));
           throw new Error('Server returned HTML error page instead of JSON');
         }
 
         result = JSON.parse(responseText);
-        console.log('Parsed JSON result:', result);
+        console.log('✅ [AUTO-REG] УСПЕШНЫЙ ПАРСИНГ JSON:', result);
       } catch (jsonError) {
-        console.error('JSON parsing error:', jsonError);
+        console.error('❌ [AUTO-REG] ОШИБКА ПАРСИНГА JSON:', jsonError);
+        console.error('🔍 [AUTO-REG] Проверьте формат ответа сервера');
         throw new Error(`Invalid JSON response: ${jsonError.message}`);
       }
 
       if (!result.success) {
+        console.error('❌ [AUTO-REG] СЕРВЕР ВЕРНУЛ ОШИБКУ:', result.message);
         throw new Error(result.message || 'Backend registration failed');
       }
 
+      console.log('🎉 [AUTO-REG] РЕГИСТРАЦИЯ ПРОШЛА УСПЕШНО');
+      console.log('👤 [AUTO-REG] Пользователь создан:', result.user?.telegram_id);
       return result;
+
     } catch (error) {
-      console.error('Backend registration error:', error);
+      console.error('💥 [AUTO-REG] КРИТИЧЕСКАЯ ОШИБКА РЕГИСТРАЦИИ:', error);
+      console.error('🔍 [AUTO-REG] Детали ошибки:', {
+        message: error.message,
+        stack: error.stack,
+        url: window.location.href,
+        timestamp: new Date().toISOString()
+      });
       throw error;
     }
   }

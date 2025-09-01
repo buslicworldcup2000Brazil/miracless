@@ -12,7 +12,15 @@
     "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
     "dev": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
     "deploy": "npm run build && git add . && git commit -m \"Deploy\" && git push origin main",
-    "test-firebase": "cd backend && node test-firebase.js"
+    "test-firebase": "cd backend && node test-firebase.js",
+    "test-db": "cd backend && node test-db.js",
+    "test-postgres": "cd backend && node test-postgres.js",
+    "test-api": "cd backend && node test-api.js",
+    "view-db": "cd backend && node view-db.js",
+    "diagnose": "cd backend && node diagnose.js",
+    "prisma-generate": "cd backend && npx prisma generate",
+    "prisma-push": "cd backend && npx prisma db push",
+    "prisma-studio": "cd backend && npx prisma studio --port 5555"
   },
   "dependencies": {
     "@telegram-apps/telegram-ui": "^2.1.9",

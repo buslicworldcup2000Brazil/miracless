@@ -7,10 +7,18 @@ const lotteryScheduler = require('./lotteryScheduler');
 const notificationService = require('./notificationService');
 
 // --- Инициализация ---
+console.log('🚀 [SERVER] НАЧАЛО ЗАПУСКА СЕРВЕРА');
+console.log('📊 [SERVER] Node.js версия:', process.version);
+console.log('🌍 [SERVER] Окружение:', process.env.NODE_ENV || 'development');
+
 const app = express();
 const port = process.env.PORT || 3000;
+
+console.log('⚙️ [SERVER] Настройка Express...');
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+console.log('✅ [SERVER] Express настроен');
 
 // --- КОНФИГУРАЦИЯ ---
 const ADMIN_IDS = ["5206288199", "1329896342"];
@@ -19,8 +27,16 @@ const RESTRICTED_ADMIN = "1329896342"; // Ограниченный админ
 const COINGECKO_API_KEY = "CG-7ZzjP5H5QkdkC78DXGU9mCpY";
 
 // --- Database Инициализация ---
-// Используем Prisma с SQLite
-const prisma = require('./prisma');
+console.log('🗄️ [SERVER] Инициализация баз данных...');
+
+// Используем Prisma с SQLite/PostgreSQL
+try {
+    const prisma = require('./prisma');
+    console.log('✅ [SERVER] Prisma подключен успешно');
+} catch (error) {
+    console.error('❌ [SERVER] Ошибка подключения к Prisma:', error);
+    process.exit(1);
+}
 
 // --- Клиент CoinGecko API ---
 const getExchangeRate = (currencyIds) => {
@@ -44,14 +60,27 @@ const getExchangeRate = (currencyIds) => {
 };
 
 // --- API Routes ---
+console.log('🛣️ [SERVER] Настройка API маршрутов...');
 
 // Аутентификация пользователя
 app.post('/api/auth', async (req, res) => {
+    console.log('🔐 [API] Получен запрос POST /api/auth');
+    console.log('📥 [API] Headers:', JSON.stringify(req.headers, null, 2));
+    console.log('📦 [API] Body:', JSON.stringify(req.body, null, 2));
+
     try {
         const result = await authenticateUser(req, res);
+        console.log('✅ [API] Запрос /api/auth обработан успешно');
     } catch (error) {
-        console.error('Auth error:', error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        console.error('❌ [API] Ошибка в /api/auth:', error);
+        console.error('🔍 [API] Детали ошибки:', {
+            message: error.message,
+            stack: error.stack,
+            status: res.statusCode
+        });
+        if (!res.headersSent) {
+            res.status(500).json({ success: false, message: 'Internal server error' });
+        }
     }
 });
 
@@ -77,24 +106,53 @@ app.get('/api/exchange-rates', async (req, res) => {
 });
 
 // --- Запуск сервера ---
+console.log('🚀 [SERVER] Запуск сервера...');
+console.log('🔌 [SERVER] Порт:', port);
+console.log('🌐 [SERVER] Прослушивание подключений...');
+
 app.listen(port, () => {
-    console.log(`🚀 Server running on port ${port}`);
-    console.log(`📊 Admin IDs: ${ADMIN_IDS.join(', ')}`);
-    console.log(`👑 Main Admin: ${MAIN_ADMIN}`);
-    console.log(`🔒 Restricted Admin: ${RESTRICTED_ADMIN}`);
+    console.log(`✅ [SERVER] СЕРВЕР ЗАПУЩЕН НА ПОРТУ ${port}`);
+    console.log(`📊 [SERVER] Admin IDs: ${ADMIN_IDS.join(', ')}`);
+    console.log(`👑 [SERVER] Main Admin: ${MAIN_ADMIN}`);
+    console.log(`🔒 [SERVER] Restricted Admin: ${RESTRICTED_ADMIN}`);
+    console.log(`🔗 [SERVER] API endpoints:`);
+    console.log(`   POST /api/auth - Аутентификация`);
+    console.log(`   GET /api/balance/:userId - Баланс пользователя`);
+    console.log(`   GET /api/exchange-rates - Курсы валют`);
+    console.log('🎉 [SERVER] ГОТОВ К РАБОТЕ!');
 });
 
 // Graceful shutdown
+console.log('🛡️ [SERVER] Настройка graceful shutdown...');
+
 process.on('SIGINT', async () => {
-    console.log('🛑 Shutting down gracefully...');
-    await prisma.$disconnect();
-    process.exit(0);
+    console.log('🛑 [SERVER] Получен сигнал SIGINT (Ctrl+C)');
+    console.log('🔄 [SERVER] Начинаем graceful shutdown...');
+    try {
+        await prisma.$disconnect();
+        console.log('✅ [SERVER] База данных отключена');
+        console.log('👋 [SERVER] Сервер остановлен');
+        process.exit(0);
+    } catch (error) {
+        console.error('❌ [SERVER] Ошибка при отключении БД:', error);
+        process.exit(1);
+    }
 });
 
 process.on('SIGTERM', async () => {
-    console.log('🛑 Shutting down gracefully...');
-    await prisma.$disconnect();
-    process.exit(0);
+    console.log('🛑 [SERVER] Получен сигнал SIGTERM');
+    console.log('🔄 [SERVER] Начинаем graceful shutdown...');
+    try {
+        await prisma.$disconnect();
+        console.log('✅ [SERVER] База данных отключена');
+        console.log('👋 [SERVER] Сервер остановлен');
+        process.exit(0);
+    } catch (error) {
+        console.error('❌ [SERVER] Ошибка при отключении БД:', error);
+        process.exit(1);
+    }
 });
+
+console.log('✅ [SERVER] Graceful shutdown настроен');
 
 module.exports = app;
