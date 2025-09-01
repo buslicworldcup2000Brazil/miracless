@@ -1,14 +1,16 @@
 // backend/src/auth.js
-const { initializeFirebase } = require('./firebase');
+const { PrismaClient } = require('@prisma/client');
 
-let db;
-try {
-    const { db: firestoreDb } = initializeFirebase();
-    db = firestoreDb;
-} catch (error) {
-    console.error("Ошибка инициализации Firebase в auth.js:", error);
-    process.exit(1);
-}
+const prisma = new PrismaClient({
+    log: ['error', 'warn'],
+    datasources: {
+        db: {
+            url: process.env.DATABASE_URL
+        }
+    }
+});
+
+console.log('🗄️ [AUTH] Используем PostgreSQL через Prisma (локальный экземпляр)');
 
 const authenticateUser = async (req, res) => {
     console.log('🔐 [AUTH] НАЧАЛО АУТЕНТИФИКАЦИИ ПОЛЬЗОВАТЕЛЯ');
@@ -36,13 +38,15 @@ const authenticateUser = async (req, res) => {
         }
 
         console.log('🔍 [AUTH] Проверка существования пользователя в БД...');
-        const userRef = db.collection('users').doc(String(telegram_id));
-        const doc = await userRef.get();
 
-        let user;
-        if (!doc.exists) {
+        // Ищем пользователя в PostgreSQL через Prisma
+        let user = await prisma.user.findUnique({
+            where: { telegram_id: String(telegram_id) }
+        });
+
+        if (!user) {
             console.log('👤 [AUTH] ПОЛЬЗОВАТЕЛЬ НЕ НАЙДЕН - СОЗДАЕМ НОВОГО');
-            // Создаем нового пользователя с расширенными данными
+            // Создаем нового пользователя в PostgreSQL
             user = {
                 telegram_id: String(telegram_id),
                 username: username || '',
@@ -64,13 +68,15 @@ const authenticateUser = async (req, res) => {
                     currency: 'USD'
                 }
             };
-            console.log('💾 [AUTH] Сохранение нового пользователя в БД...');
-            await userRef.set(user);
+
+            console.log('💾 [AUTH] Сохранение нового пользователя в PostgreSQL...');
+            user = await prisma.user.create({
+                data: user
+            });
             console.log(`✅ [AUTH] НОВЫЙ ПОЛЬЗОВАТЕЛЬ ЗАРЕГИСТРИРОВАН: ${telegram_id} (${first_name} ${last_name})`);
         } else {
             console.log('👤 [AUTH] ПОЛЬЗОВАТЕЛЬ УЖЕ СУЩЕСТВУЕТ - ОБНОВЛЯЕМ ДАННЫЕ');
-            // Обновляем данные существующего пользователя
-            user = doc.data();
+
             const updateData = {
                 last_seen: new Date()
             };
@@ -87,9 +93,11 @@ const authenticateUser = async (req, res) => {
             if (is_premium !== undefined && is_premium !== user.is_premium) updateData.is_premium = is_premium;
 
             if (Object.keys(updateData).length > 1) { // больше чем только last_seen
-                console.log('💾 [AUTH] Обновление данных пользователя...');
-                await userRef.update(updateData);
-                user = { ...user, ...updateData };
+                console.log('💾 [AUTH] Обновление данных пользователя в PostgreSQL...');
+                user = await prisma.user.update({
+                    where: { telegram_id: String(telegram_id) },
+                    data: updateData
+                });
                 console.log('✅ [AUTH] Данные пользователя обновлены');
             } else {
                 console.log('📋 [AUTH] Данные пользователя не изменились');
@@ -116,40 +124,66 @@ const authenticateUser = async (req, res) => {
             telegram_id: req.body?.telegram_id
         });
 
-        // Проверяем тип ошибки
-        if (error.code === 'PERMISSION_DENIED') {
-            console.error('🔐 [AUTH] Ошибка доступа к Firebase');
-        } else if (error.code === 'UNAVAILABLE') {
-            console.error('🌐 [AUTH] Firebase недоступен');
-        } else if (error.code === 'DEADLINE_EXCEEDED') {
-            console.error('⏰ [AUTH] Превышено время ожидания Firebase');
+        // Проверяем тип ошибки PostgreSQL
+        if (error.code === 'P1001') {
+            console.error('🔌 [AUTH] Не удается подключиться к БД');
+        } else if (error.code === 'P2002') {
+            console.error('🔑 [AUTH] Нарушение уникальности');
+        } else if (error.code === 'P2028') {
+            console.error('⏰ [AUTH] Превышено время ожидания БД');
         }
 
         res.status(500).json({ success: false, message: "Internal Server Error" });
         console.log('❌ [AUTH] ОТПРАВЛЕН ОТВЕТ ОБ ОШИБКЕ КЛИЕНТУ');
+    } finally {
+        // Всегда отключаемся от БД
+        try {
+            await prisma.$disconnect();
+        } catch (disconnectError) {
+            console.warn('⚠️ [AUTH] Ошибка отключения от БД:', disconnectError.message);
+        }
     }
 };
 
 const getUserBalance = async (req, res) => {
+    console.log('💰 [BALANCE] Запрос баланса пользователя');
     try {
         const { userId } = req.params;
-        
+        console.log('🆔 [BALANCE] User ID:', userId);
+
         if (!userId) {
+            console.error('❌ [BALANCE] User ID не указан');
             return res.status(400).json({ success: false, message: 'User ID is required' });
         }
-        
-        const userRef = db.collection('users').doc(String(userId));
-        const doc = await userRef.get();
-        
-        if (!doc.exists) {
+
+        console.log('🔍 [BALANCE] Поиск пользователя в PostgreSQL...');
+        const user = await prisma.user.findUnique({
+            where: { telegram_id: String(userId) },
+            select: { balance: true }
+        });
+
+        if (!user) {
+            console.error('❌ [BALANCE] Пользователь не найден');
             return res.status(404).json({ success: false, message: "User not found" });
         }
-        
-        const user = doc.data();
+
+        console.log('✅ [BALANCE] Баланс найден:', user.balance);
         res.json({ success: true, balance: user.balance });
     } catch (error) {
-        console.error("Ошибка получения баланса:", error);
+        console.error('💥 [BALANCE] Ошибка получения баланса:', error);
+        console.error('🔍 [BALANCE] Детали ошибки:', {
+            message: error.message,
+            code: error.code,
+            userId: req.params?.userId
+        });
         res.status(500).json({ success: false, message: "Internal Server Error" });
+    } finally {
+        // Всегда отключаемся от БД
+        try {
+            await prisma.$disconnect();
+        } catch (disconnectError) {
+            console.warn('⚠️ [BALANCE] Ошибка отключения от БД:', disconnectError.message);
+        }
     }
 };
 

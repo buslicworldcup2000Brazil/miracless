@@ -16,6 +16,7 @@
     "test-db": "cd backend && node test-db.js",
     "test-postgres": "cd backend && node test-postgres.js",
     "test-api": "cd backend && node test-api.js",
+    "test-all": "npm run test-postgres && npm run test-api",
     "view-db": "cd backend && node view-db.js",
     "diagnose": "cd backend && node diagnose.js",
     "prisma-generate": "cd backend && npx prisma generate",

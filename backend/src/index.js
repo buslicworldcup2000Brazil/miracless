@@ -27,14 +27,52 @@ const RESTRICTED_ADMIN = "1329896342"; // Ограниченный админ
 const COINGECKO_API_KEY = "CG-7ZzjP5H5QkdkC78DXGU9mCpY";
 
 // --- Database Инициализация ---
-console.log('🗄️ [SERVER] Инициализация баз данных...');
+console.log('🗄️ [SERVER] Инициализация PostgreSQL через Prisma...');
 
-// Используем Prisma с SQLite/PostgreSQL
+// Используем только Prisma с PostgreSQL
 try {
-    const prisma = require('./prisma');
-    console.log('✅ [SERVER] Prisma подключен успешно');
+    const { PrismaClient } = require('@prisma/client');
+    const prisma = new PrismaClient({
+        log: ['error', 'warn'],
+        datasources: {
+            db: {
+                url: process.env.DATABASE_URL
+            }
+        }
+    });
+
+    console.log('🔗 [SERVER] DATABASE_URL:', process.env.DATABASE_URL ? 'настроена' : 'не настроена');
+
+    // Тестируем подключение
+    prisma.$connect()
+        .then(async () => {
+            console.log('✅ [SERVER] PostgreSQL подключен успешно через Prisma');
+
+            // Тестируем простой запрос
+            try {
+                const userCount = await prisma.user.count();
+                console.log(`📊 [SERVER] Тестовый запрос успешен. Пользователей в БД: ${userCount}`);
+            } catch (testError) {
+                console.warn('⚠️ [SERVER] Тестовый запрос не удался, но подключение работает:', testError.message);
+            }
+        })
+        .catch((error) => {
+            console.error('❌ [SERVER] Ошибка подключения к PostgreSQL:', error);
+            console.error('🔍 [SERVER] Детали ошибки:', {
+                message: error.message,
+                code: error.code,
+                meta: error.meta
+            });
+            process.exit(1);
+        });
+
+    global.prisma = prisma;
 } catch (error) {
-    console.error('❌ [SERVER] Ошибка подключения к Prisma:', error);
+    console.error('❌ [SERVER] Ошибка инициализации Prisma:', error);
+    console.error('🔍 [SERVER] Детали ошибки:', {
+        message: error.message,
+        stack: error.stack
+    });
     process.exit(1);
 }
 
@@ -129,8 +167,10 @@ process.on('SIGINT', async () => {
     console.log('🛑 [SERVER] Получен сигнал SIGINT (Ctrl+C)');
     console.log('🔄 [SERVER] Начинаем graceful shutdown...');
     try {
-        await prisma.$disconnect();
-        console.log('✅ [SERVER] База данных отключена');
+        if (global.prisma) {
+            await global.prisma.$disconnect();
+            console.log('✅ [SERVER] PostgreSQL отключена');
+        }
         console.log('👋 [SERVER] Сервер остановлен');
         process.exit(0);
     } catch (error) {
@@ -143,8 +183,10 @@ process.on('SIGTERM', async () => {
     console.log('🛑 [SERVER] Получен сигнал SIGTERM');
     console.log('🔄 [SERVER] Начинаем graceful shutdown...');
     try {
-        await prisma.$disconnect();
-        console.log('✅ [SERVER] База данных отключена');
+        if (global.prisma) {
+            await global.prisma.$disconnect();
+            console.log('✅ [SERVER] PostgreSQL отключена');
+        }
         console.log('👋 [SERVER] Сервер остановлен');
         process.exit(0);
     } catch (error) {
