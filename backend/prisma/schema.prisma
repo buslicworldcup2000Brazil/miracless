@@ -96,7 +96,8 @@ model Transaction {
 
   // Relations
   user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  depositRequest DepositRequest?
+  depositRequestId String? @unique
+  depositRequest DepositRequest? @relation(fields: [depositRequestId], references: [id], onDelete: SetNull)
 
   @@map("transactions")
 }

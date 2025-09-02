@@ -17,8 +17,8 @@ RUN npm run install:all
 # Copy source code
 COPY . .
 
-# Generate Prisma client
-RUN cd backend && npx prisma generate
+# Generate Prisma client (only if not already generated)
+RUN cd backend && (test -d node_modules/.prisma || npx prisma generate)
 
 # Build frontend
 RUN npm run build:frontend
