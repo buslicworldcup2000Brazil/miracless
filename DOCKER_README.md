@@ -2,11 +2,20 @@
 
 ## 🚀 Быстрый старт с Docker
 
-### Предварительные требования
+### 📋 Предварительные требования
 - Docker Desktop или Docker Engine
 - Docker Compose
+- **Node.js 20+** (для локальной разработки)
 - Минимум 2GB RAM
 - 5GB свободного места на диске
+
+#### 🔧 Требования к Node.js
+Проект использует **Node.js 20** для совместимости с Firebase Admin SDK:
+```bash
+# Проверить версию Node.js
+node --version  # Должно быть >= 20.0.0
+npm --version   # Должно быть >= 10.0.0
+```
 
 ### 1. Клонирование и настройка
 
@@ -145,6 +154,25 @@ docker system prune -a
 npm run docker:build
 ```
 
+### Проблема: "npm ci can only install packages when your package.json and package-lock.json are in sync"
+```bash
+# Решение: обновить lock файлы
+npm run update-lockfiles
+
+# Или вручную:
+rm package-lock.json
+rm frontend/package-lock.json
+rm backend/package-lock.json
+npm run install:all
+```
+
+### Проблема: "Unsupported engine" для Firebase пакетов
+```bash
+# Решение: обновить Node.js до версии 20+
+# Dockerfile уже обновлен до node:20-alpine
+# Для локальной разработки установите Node.js 20
+```
+
 ### Проблема: "Port already in use"
 ```bash
 # Освободить порт
@@ -207,6 +235,35 @@ docker-compose exec postgres pg_dump -U miracless_user miracless_db > backup.sql
 
 # Восстановление
 docker-compose exec -T postgres psql -U miracless_user -d miracless_db < backup.sql
+```
+
+## 🚂 Развертывание на Railway
+
+### Автоматическое развертывание:
+1. Подключите GitHub репозиторий к Railway
+2. Railway автоматически обнаружит `Dockerfile` и `railway.toml`
+3. Настройте переменные окружения в Railway Dashboard
+4. Развертывание запустится автоматически
+
+### Переменные окружения для Railway:
+```bash
+# В Railway Dashboard → Variables
+DATABASE_URL=postgresql://...
+TELEGRAM_BOT_TOKEN=...
+FIREBASE_SERVICE_ACCOUNT=...
+# ... остальные переменные из .env.docker
+```
+
+### Мониторинг Railway:
+```bash
+# Логи приложения
+railway logs
+
+# Статус развертывания
+railway status
+
+# Перезапуск
+railway restart
 ```
 
 ## 🎯 Следующие шаги

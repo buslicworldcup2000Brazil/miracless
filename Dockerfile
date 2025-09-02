@@ -1,7 +1,7 @@
 # Multi-stage build for Miracless Lottery Bot
 
 # Build stage
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 # Set working directory
 WORKDIR /app
@@ -24,7 +24,7 @@ RUN cd backend && (test -d node_modules/.prisma || npx prisma generate)
 RUN npm run build:frontend
 
 # Production stage
-FROM node:18-alpine AS production
+FROM node:20-alpine AS production
 
 # Install dumb-init for proper signal handling
 RUN apk add --no-cache dumb-init
@@ -37,8 +37,8 @@ COPY --from=builder /app/backend ./backend
 COPY --from=builder /app/frontend/build ./frontend/build
 COPY --from=builder /app/package*.json ./
 
-# Install production dependencies only
-RUN cd backend && npm ci --only=production
+# Install production dependencies only (force npm install instead of npm ci)
+RUN cd backend && rm -f package-lock.json && npm install --production --no-optional --ignore-scripts
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs

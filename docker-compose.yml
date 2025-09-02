@@ -26,6 +26,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: miracless-backend
+    platform: linux/amd64
     environment:
       - DATABASE_URL=postgresql://miracless_user:miracless_password@postgres:5432/miracless_db
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
