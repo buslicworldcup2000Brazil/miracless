@@ -83,6 +83,8 @@ model LotteryParticipation {
 
 model Transaction {
   id            String  @id @default(cuid())
+  txHash        String?
+  currency      String?
   userId        String
   type          TransactionType
   amount        Float
@@ -94,8 +96,29 @@ model Transaction {
 
   // Relations
   user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  depositRequest DepositRequest?
 
   @@map("transactions")
+}
+
+model DepositRequest {
+  id            String  @id @default(cuid())
+  userId        String
+  currency      String
+  expectedAmount Float
+  paymentAddress String
+  txHash        String?
+  actualAmount  Float?
+  usdAmount     Float?
+  status        DepositStatus @default(PENDING)
+  createdAt     DateTime @default(now())
+  expiresAt     DateTime
+  completedAt   DateTime?
+
+  // Relations
+  transaction   Transaction?
+
+  @@map("deposit_requests")
 }
 
 model AdminLog {
@@ -103,6 +126,8 @@ model AdminLog {
   adminId   String
   action    String
   details   String?
+  ipAddress String?
+  userAgent String?
   timestamp DateTime @default(now())
 
   @@map("admin_logs")
@@ -144,4 +169,11 @@ enum TransactionStatus {
   COMPLETED
   FAILED
   CANCELLED
+}
+
+enum DepositStatus {
+  PENDING
+  COMPLETED
+  EXPIRED
+  FAILED
 }

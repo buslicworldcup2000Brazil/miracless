@@ -8,8 +8,12 @@ class NotificationService {
 
     // Send notification to a specific user
     async sendToUser(chatId, text, options = {}) {
+        console.log('📢 [NOTIFICATION] НАЧАЛО ОТПРАВКИ УВЕДОМЛЕНИЯ');
+        console.log('👤 [NOTIFICATION] Chat ID:', chatId);
+        console.log('📝 [NOTIFICATION] Text length:', text.length);
+
         if (!this.botToken) {
-            console.warn('TELEGRAM_BOT_TOKEN not configured, skipping notification');
+            console.error('❌ [NOTIFICATION] TELEGRAM_BOT_TOKEN не настроен');
             return false;
         }
 
@@ -21,6 +25,8 @@ class NotificationService {
                 parse_mode: options.parseMode || 'HTML',
                 reply_markup: options.replyMarkup || null
             });
+
+            console.log('🌐 [NOTIFICATION] Отправка запроса к Telegram API...');
 
             const req = https.request({
                 hostname: 'api.telegram.org',
@@ -37,21 +43,28 @@ class NotificationService {
                     try {
                         const response = JSON.parse(responseData);
                         if (response.ok) {
-                            console.log(`Notification sent to ${chatId}`);
+                            console.log('✅ [NOTIFICATION] Уведомление успешно отправлено');
+                            console.log('📊 [NOTIFICATION] Message ID:', response.result?.message_id);
                             resolve(true);
                         } else {
-                            console.warn(`Failed to send notification to ${chatId}:`, response.description);
+                            console.error('❌ [NOTIFICATION] Ошибка отправки:', response.description);
+                            console.error('🔍 [NOTIFICATION] Error code:', response.error_code);
                             resolve(false);
                         }
                     } catch (e) {
-                        console.warn(`Error parsing Telegram response for ${chatId}:`, e);
+                        console.error('💥 [NOTIFICATION] Ошибка парсинга ответа:', e);
+                        console.log('📄 [NOTIFICATION] Raw response:', responseData);
                         resolve(false);
                     }
                 });
             });
 
             req.on('error', (error) => {
-                console.warn(`Error sending notification to ${chatId}:`, error);
+                console.error('💥 [NOTIFICATION] Сетевая ошибка:', error);
+                console.error('🔍 [NOTIFICATION] Error details:', {
+                    message: error.message,
+                    code: error.code
+                });
                 resolve(false);
             });
 
@@ -62,50 +75,102 @@ class NotificationService {
 
     // Send lottery completion notification
     async sendLotteryCompleted(lottery, winnerId) {
+        console.log('🏆 [LOTTERY-COMPLETED] НАЧАЛО ОТПРАВКИ УВЕДОМЛЕНИЙ О ЗАВЕРШЕНИИ ЛОТЕРЕИ');
+        console.log('🎰 [LOTTERY-COMPLETED] Lottery ID:', lottery.id);
+        console.log('🎰 [LOTTERY-COMPLETED] Lottery Title:', lottery.title);
+        console.log('🏆 [LOTTERY-COMPLETED] Winner ID:', winnerId);
+        console.log('👥 [LOTTERY-COMPLETED] Total participants:', lottery.participants?.length || 0);
+
         const winnerMessage = this.formatWinnerMessage(lottery, winnerId);
         const loserMessage = this.formatLoserMessage(lottery, winnerId);
 
         const promises = [];
+        let winnerSent = false;
+        let losersSent = 0;
 
         // Send to winner
         if (winnerId) {
+            console.log('📢 [LOTTERY-COMPLETED] Отправка уведомления победителю...');
             promises.push(this.sendToUser(winnerId, winnerMessage, {
                 parseMode: 'HTML'
+            }).then(success => {
+                if (success) {
+                    winnerSent = true;
+                    console.log('✅ [LOTTERY-COMPLETED] Уведомление победителю отправлено');
+                } else {
+                    console.error('❌ [LOTTERY-COMPLETED] Ошибка отправки уведомления победителю');
+                }
             }));
+        } else {
+            console.warn('⚠️ [LOTTERY-COMPLETED] Победитель не указан');
         }
 
         // Send to all participants except winner
         if (lottery.participants && lottery.participants.length > 0) {
+            console.log('📢 [LOTTERY-COMPLETED] Отправка уведомлений участникам...');
             for (const participantId of lottery.participants) {
                 if (participantId !== winnerId) {
                     promises.push(this.sendToUser(participantId, loserMessage, {
                         parseMode: 'HTML'
+                    }).then(success => {
+                        if (success) {
+                            losersSent++;
+                        }
                     }));
                 }
             }
+        } else {
+            console.warn('⚠️ [LOTTERY-COMPLETED] Нет участников для уведомлений');
         }
 
+        console.log('⏳ [LOTTERY-COMPLETED] Ожидание завершения всех отправок...');
         await Promise.all(promises);
-        console.log(`Sent completion notifications for lottery ${lottery.id}`);
+
+        console.log('✅ [LOTTERY-COMPLETED] УВЕДОМЛЕНИЯ ОТПРАВЛЕНЫ:');
+        console.log('🏆 [LOTTERY-COMPLETED] Победителю:', winnerSent ? '✅' : '❌');
+        console.log('👥 [LOTTERY-COMPLETED] Участникам:', `${losersSent}/${(lottery.participants?.length || 1) - (winnerId ? 1 : 0)}`);
+        console.log('📊 [LOTTERY-COMPLETED] Всего отправлено:', winnerSent + losersSent);
     }
 
     // Send new lottery notification
     async sendNewLottery(lottery, subscribers = []) {
-        const message = this.formatNewLotteryMessage(lottery);
+        console.log('🎰 [NEW-LOTTERY] НАЧАЛО ОТПРАВКИ УВЕДОМЛЕНИЙ О НОВОЙ ЛОТЕРЕЕ');
+        console.log('🎰 [NEW-LOTTERY] Lottery ID:', lottery.id);
+        console.log('🎰 [NEW-LOTTERY] Lottery Title:', lottery.title);
+        console.log('👥 [NEW-LOTTERY] Subscribers count:', subscribers.length);
 
-        const promises = subscribers.map(subscriberId =>
-            this.sendToUser(subscriberId, message, {
+        if (subscribers.length === 0) {
+            console.warn('⚠️ [NEW-LOTTERY] Нет подписчиков для уведомлений');
+            return;
+        }
+
+        const message = this.formatNewLotteryMessage(lottery);
+        console.log('📝 [NEW-LOTTERY] Сформировано сообщение:', message.substring(0, 100) + '...');
+
+        const promises = subscribers.map(subscriberId => {
+            console.log('📢 [NEW-LOTTERY] Отправка уведомления подписчику:', subscriberId);
+            return this.sendToUser(subscriberId, message, {
                 parseMode: 'HTML',
                 replyMarkup: {
                     inline_keyboard: [[
                         { text: 'Join Lottery', callback_data: `join_lottery_${lottery.id}` }
                     ]]
                 }
-            })
-        );
+            }).then(success => {
+                if (!success) {
+                    console.error('❌ [NEW-LOTTERY] Ошибка отправки уведомления подписчику:', subscriberId);
+                }
+                return success;
+            });
+        });
 
-        await Promise.all(promises);
-        console.log(`Sent new lottery notifications for ${lottery.title}`);
+        console.log('⏳ [NEW-LOTTERY] Ожидание завершения всех отправок...');
+        const results = await Promise.all(promises);
+        const successCount = results.filter(result => result).length;
+
+        console.log('✅ [NEW-LOTTERY] УВЕДОМЛЕНИЯ ОТПРАВЛЕНЫ:');
+        console.log('📊 [NEW-LOTTERY] Успешно:', `${successCount}/${subscribers.length}`);
+        console.log('📈 [NEW-LOTTERY] Процент успеха:', `${Math.round((successCount / subscribers.length) * 100)}%`);
     }
 
     // Send lottery reminder (24 hours before end)
@@ -201,13 +266,14 @@ class NotificationService {
     // Send balance update notification
     async sendBalanceUpdate(userId, amount, type = 'deposit') {
         const typeMessages = {
-            'deposit': `Your balance has been credited with $${amount}`,
-            'withdrawal': `$${amount} has been deducted from your balance`,
-            'prize': `You have received a prize of $${amount}`,
-            'refund': `$${amount} has been refunded to your balance`
+            'deposit': `Ваш баланс пополнен на $${amount.toFixed(2)}`,
+            'withdrawal': `С вашего баланса списано $${amount.toFixed(2)}`,
+            'prize': `Вы получили приз в размере $${amount.toFixed(2)}`,
+            'refund': `Вам возвращено $${amount.toFixed(2)} на баланс`,
+            'timeout': `Время ожидания оплаты истекло. Попробуйте создать новый запрос на пополнение.`
         };
 
-        const message = `<b>Balance Update</b>\n\n${typeMessages[type] || `Balance updated: $${amount}`}\n\nCurrent balance will be updated shortly.`;
+        const message = `<b>💰 Изменение баланса</b>\n\n${typeMessages[type] || `Баланс изменен: $${amount.toFixed(2)}`}\n\n${type === 'timeout' ? 'Создайте новый запрос для пополнения.' : 'Баланс обновлен автоматически.'}`;
 
         return await this.sendToUser(userId, message, {
             parseMode: 'HTML'

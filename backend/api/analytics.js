@@ -3,15 +3,19 @@ const express = require('express');
 const serverless = require('serverless-http');
 const app = express();
 const router = express.Router();
+const { PrismaClient } = require('@prisma/client');
 
-let db;
-try {
-    const { db: firestoreDb } = require('../src/firebase').initializeFirebase();
-    db = firestoreDb;
-    console.log("Firebase Firestore (Analytics): OK");
-} catch (error) {
-    console.error("Ошибка инициализации Firebase:", error);
-}
+const prisma = new PrismaClient({
+    log: ['error', 'warn'],
+    datasources: {
+        db: {
+            url: process.env.DATABASE_URL
+        }
+    }
+});
+
+console.log('📊 [API-ANALYTICS] Инициализация API аналитики с PostgreSQL');
+console.log('🔗 [API-ANALYTICS] DATABASE_URL:', process.env.DATABASE_URL ? 'настроена' : 'не настроена');
 
 app.use(express.json());
 
@@ -31,72 +35,83 @@ const isAdmin = (req, res, next) => {
 };
 
 // Получить общую статистику
-router.get('/overview', isAdmin, async (req, res) => {
+router.get('/overview', async (req, res) => {
+    console.log('📊 [ANALYTICS-OVERVIEW] НАЧАЛО ЗАПРОСА ОБЩЕЙ СТАТИСТИКИ');
     try {
         const { adminId } = req.body;
+        console.log('👑 [ANALYTICS-OVERVIEW] Admin ID:', adminId);
 
+        // Проверка прав администратора
+        const adminIdStr = String(adminId);
+        if (adminIdStr !== "5206288199" && adminIdStr !== "1329896342") {
+            console.error('❌ [ANALYTICS-OVERVIEW] ДОСТУП ЗАПРЕЩЕН');
+            return res.status(403).json({ success: false, message: 'Permission denied' });
+        }
+
+        console.log('👥 [ANALYTICS-OVERVIEW] Получение статистики пользователей...');
         // Получаем статистику пользователей
-        const usersSnapshot = await db.collection('users').get();
-        const totalUsers = usersSnapshot.size;
-        const activeUsers = usersSnapshot.docs.filter(doc => {
-            const user = doc.data();
-            const lastSeen = user.last_seen?.toDate();
-            const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-            return lastSeen && lastSeen > weekAgo;
-        }).length;
+        const totalUsers = await prisma.user.count();
+        const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const activeUsers = await prisma.user.count({
+            where: { last_seen: { gt: weekAgo } }
+        });
+        console.log('✅ [ANALYTICS-OVERVIEW] Пользователи:', { total: totalUsers, active: activeUsers });
 
+        console.log('🎰 [ANALYTICS-OVERVIEW] Получение статистики лотерей...');
         // Получаем статистику лотерей
-        const lotteriesSnapshot = await db.collection('lotteries').get();
-        const totalLotteries = lotteriesSnapshot.size;
-        const activeLotteries = lotteriesSnapshot.docs.filter(doc => {
-            const lottery = doc.data();
-            return lottery.status === 'active';
-        }).length;
+        const totalLotteries = await prisma.lottery.count();
+        const activeLotteries = await prisma.lottery.count({
+            where: { status: 'active' }
+        });
+        console.log('✅ [ANALYTICS-OVERVIEW] Лотереи:', { total: totalLotteries, active: activeLotteries });
 
+        console.log('💰 [ANALYTICS-OVERVIEW] Получение статистики транзакций...');
         // Получаем статистику транзакций
-        const transactionsSnapshot = await db.collection('transactions').get();
-        const totalTransactions = transactionsSnapshot.size;
-        const totalRevenue = transactionsSnapshot.docs.reduce((sum, doc) => {
-            const tx = doc.data();
-            return sum + (tx.amount || 0);
-        }, 0);
+        const totalTransactions = await prisma.transaction.count();
+        const transactions = await prisma.transaction.findMany();
+        const totalRevenue = transactions.reduce((sum, tx) => sum + (tx.usd_amount || 0), 0);
 
         // Получаем статистику за последние 30 дней
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-        const recentTransactions = transactionsSnapshot.docs.filter(doc => {
-            const tx = doc.data();
-            return tx.timestamp?.toDate() > thirtyDaysAgo;
+        const recentTransactions = await prisma.transaction.findMany({
+            where: { submitted_at: { gt: thirtyDaysAgo } }
         });
-        const monthlyRevenue = recentTransactions.reduce((sum, doc) => {
-            const tx = doc.data();
-            return sum + (tx.amount || 0);
-        }, 0);
+        const monthlyRevenue = recentTransactions.reduce((sum, tx) => sum + (tx.usd_amount || 0), 0);
 
-        res.json({
-            success: true,
-            data: {
-                users: {
-                    total: totalUsers,
-                    active: activeUsers
-                },
-                lotteries: {
-                    total: totalLotteries,
-                    active: activeLotteries
-                },
-                transactions: {
-                    total: totalTransactions,
-                    totalRevenue: totalRevenue,
-                    monthlyRevenue: monthlyRevenue
-                }
-            }
+        console.log('✅ [ANALYTICS-OVERVIEW] Транзакции:', {
+            total: totalTransactions,
+            totalRevenue: totalRevenue,
+            monthlyRevenue: monthlyRevenue
         });
+
+        const result = {
+            users: { total: totalUsers, active: activeUsers },
+            lotteries: { total: totalLotteries, active: activeLotteries },
+            transactions: { total: totalTransactions, totalRevenue, monthlyRevenue }
+        };
+
+        console.log('📤 [ANALYTICS-OVERVIEW] Отправка ответа клиенту...');
+        res.json({ success: true, data: result });
+        console.log('✅ [ANALYTICS-OVERVIEW] Ответ отправлен успешно');
 
     } catch (error) {
-        console.error('Analytics overview error:', error);
+        console.error('💥 [ANALYTICS-OVERVIEW] Ошибка получения статистики:', error);
+        console.error('🔍 [ANALYTICS-OVERVIEW] Детали ошибки:', {
+            message: error.message,
+            code: error.code,
+            stack: error.stack
+        });
         res.status(500).json({
             success: false,
             message: 'Failed to get analytics overview'
         });
+        console.log('❌ [ANALYTICS-OVERVIEW] Отправлен ответ об ошибке');
+    } finally {
+        try {
+            await prisma.$disconnect();
+        } catch (disconnectError) {
+            console.warn('⚠️ [ANALYTICS-OVERVIEW] Ошибка отключения от БД:', disconnectError.message);
+        }
     }
 });
 

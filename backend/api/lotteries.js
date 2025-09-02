@@ -49,104 +49,217 @@ const isMainAdmin = (req, res, next) => {
 
 // Получить все лотереи
 router.get('/', async (req, res) => {
+    console.log('🎰 [LOTTERIES] Запрос получения всех лотерей');
     try {
-        const snapshot = await db.collection('lotteries').get();
-        const lotteries = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log('🔍 [LOTTERIES] Получение лотерей из PostgreSQL...');
+        const lotteries = await prisma.lottery.findMany({
+            include: {
+                participants: true,
+                _count: {
+                    select: { participants: true }
+                }
+            },
+            orderBy: {
+                created_at: 'desc'
+            }
+        });
+
+        console.log(`✅ [LOTTERIES] Найдено ${lotteries.length} лотерей`);
+        console.log('📤 [LOTTERIES] Отправка ответа клиенту...');
         res.status(200).json({ success: true, data: lotteries });
+        console.log('✅ [LOTTERIES] Ответ отправлен успешно');
     } catch (error) {
-        console.error("Error fetching lotteries:", error);
+        console.error('💥 [LOTTERIES] Ошибка получения лотерей:', error);
+        console.error('🔍 [LOTTERIES] Детали ошибки:', {
+            message: error.message,
+            code: error.code,
+            stack: error.stack
+        });
         res.status(500).json({ success: false, message: "Internal Server Error" });
+        console.log('❌ [LOTTERIES] Отправлен ответ об ошибке');
     }
 });
 
 // Создать лотерею
-router.post('/', isMainAdmin, async (req, res) => {
+router.post('/', async (req, res) => {
+    console.log('🎰 [CREATE-LOTTERY] НАЧАЛО СОЗДАНИЯ ЛОТЕРЕИ');
     try {
         const { newLotteryData, adminId } = req.body;
-        const newDoc = db.collection('lotteries').doc();
-        const lottery = { 
-            id: newDoc.id, 
-            ...newLotteryData, 
-            participants: [], 
-            winner: null,
-            created_at: new Date(),
-            status: 'active'
-        };
-        await newDoc.set(lottery);
+        console.log('👑 [CREATE-LOTTERY] Admin ID:', adminId);
+        console.log('📋 [CREATE-LOTTERY] Данные лотереи:', JSON.stringify(newLotteryData, null, 2));
 
-        // Send notifications about new lottery (async, don't wait)
-        setImmediate(() => {
-            // Get all users who have participated in lotteries before
-            db.collection('users').get().then(snapshot => {
-                const userIds = [];
-                snapshot.forEach(doc => {
-                    const user = doc.data();
-                    if (user.balance > 0) {
-                        userIds.push(doc.id);
-                    }
-                });
-                if (userIds.length > 0) {
-                    notificationService.sendNewLottery(lottery, userIds);
-                }
-            }).catch(error => {
-                console.error('Error sending new lottery notifications:', error);
-            });
+        // Проверка прав администратора
+        if (adminId !== "5206288199") {
+            console.error('❌ [CREATE-LOTTERY] ДОСТУП ЗАПРЕЩЕН - требуется главный админ');
+            return res.status(403).json({ success: false, message: 'Main admin access required' });
+        }
+
+        console.log('💾 [CREATE-LOTTERY] Сохранение лотереи в PostgreSQL...');
+        const lottery = await prisma.lottery.create({
+            data: {
+                title: newLotteryData.title,
+                participation_cost: newLotteryData.participationCost,
+                max_participants: newLotteryData.maxParticipants,
+                end_date: new Date(newLotteryData.endDate),
+                status: 'active',
+                prizes: newLotteryData.prizes || [],
+                created_by: adminId
+            }
         });
 
+        console.log('✅ [CREATE-LOTTERY] Лотерея создана:', lottery.id);
+        console.log('📤 [CREATE-LOTTERY] Отправка ответа клиенту...');
         res.status(201).json({ success: true, data: lottery });
+        console.log('✅ [CREATE-LOTTERY] Ответ отправлен успешно');
+
+        // Отправка уведомлений (асинхронно)
+        setImmediate(async () => {
+            try {
+                console.log('📢 [CREATE-LOTTERY] Отправка уведомлений о новой лотерее...');
+                const users = await prisma.user.findMany({
+                    where: { balance: { gt: 0 } },
+                    select: { telegram_id: true }
+                });
+
+                const userIds = users.map(user => user.telegram_id);
+                console.log(`📢 [CREATE-LOTTERY] Найдено ${userIds.length} пользователей для уведомлений`);
+
+                if (userIds.length > 0) {
+                    await notificationService.sendNewLottery(lottery, userIds);
+                    console.log('✅ [CREATE-LOTTERY] Уведомления отправлены');
+                } else {
+                    console.log('📋 [CREATE-LOTTERY] Нет пользователей для уведомлений');
+                }
+            } catch (error) {
+                console.error('💥 [CREATE-LOTTERY] Ошибка отправки уведомлений:', error);
+            }
+        });
+
     } catch (error) {
-        console.error("Error creating lottery:", error);
+        console.error('💥 [CREATE-LOTTERY] Ошибка создания лотереи:', error);
+        console.error('🔍 [CREATE-LOTTERY] Детали ошибки:', {
+            message: error.message,
+            code: error.code,
+            stack: error.stack
+        });
         res.status(500).json({ success: false, message: "Internal Server Error" });
+        console.log('❌ [CREATE-LOTTERY] Отправлен ответ об ошибке');
     }
 });
 
 // Обновить лотерею
-router.put('/:id', isMainAdmin, async (req, res) => {
+router.put('/:id', async (req, res) => {
+    console.log('🎰 [UPDATE-LOTTERY] НАЧАЛО ОБНОВЛЕНИЯ ЛОТЕРЕИ');
     try {
         const { id } = req.params;
         const { updatedData, adminId } = req.body;
-        const lotteryRef = db.collection('lotteries').doc(id);
 
-        const doc = await lotteryRef.get();
-        if (!doc.exists) {
+        console.log('🆔 [UPDATE-LOTTERY] Lottery ID:', id);
+        console.log('👑 [UPDATE-LOTTERY] Admin ID:', adminId);
+        console.log('📋 [UPDATE-LOTTERY] Обновляемые данные:', JSON.stringify(updatedData, null, 2));
+
+        // Проверка прав администратора
+        if (adminId !== "5206288199") {
+            console.error('❌ [UPDATE-LOTTERY] ДОСТУП ЗАПРЕЩЕН - требуется главный админ');
+            return res.status(403).json({ success: false, message: 'Main admin access required' });
+        }
+
+        console.log('🔍 [UPDATE-LOTTERY] Поиск лотереи в PostgreSQL...');
+        const existingLottery = await prisma.lottery.findUnique({
+            where: { id: id },
+            include: { participants: true }
+        });
+
+        if (!existingLottery) {
+            console.error('❌ [UPDATE-LOTTERY] Лотерея не найдена');
             return res.status(404).json({ success: false, message: "Lottery not found" });
         }
 
-        const lottery = doc.data();
+        console.log(`📊 [UPDATE-LOTTERY] Лотерея найдена. Участников: ${existingLottery.participants?.length || 0}`);
 
-        // Check if lottery has participants - prevent editing if it has started
-        if (lottery.participants && lottery.participants.length > 0) {
+        // Проверка, что лотерея не началась
+        if (existingLottery.participants && existingLottery.participants.length > 0) {
+            console.error('❌ [UPDATE-LOTTERY] НЕЛЬЗЯ РЕДАКТИРОВАТЬ - лотерея уже началась');
             return res.status(400).json({
                 success: false,
                 message: "Cannot edit lottery that has already started (has participants)"
             });
         }
 
-        await lotteryRef.update(updatedData);
-        res.json({ success: true, message: "Lottery updated successfully" });
+        console.log('💾 [UPDATE-LOTTERY] Обновление лотереи в PostgreSQL...');
+        const updatedLottery = await prisma.lottery.update({
+            where: { id: id },
+            data: {
+                title: updatedData.title,
+                participation_cost: updatedData.participationCost,
+                max_participants: updatedData.maxParticipants,
+                end_date: updatedData.endDate ? new Date(updatedData.endDate) : undefined,
+                prizes: updatedData.prizes
+            }
+        });
+
+        console.log('✅ [UPDATE-LOTTERY] Лотерея обновлена успешно');
+        console.log('📤 [UPDATE-LOTTERY] Отправка ответа клиенту...');
+        res.json({ success: true, message: "Lottery updated successfully", data: updatedLottery });
+        console.log('✅ [UPDATE-LOTTERY] Ответ отправлен успешно');
+
     } catch (error) {
-        console.error("Error updating lottery:", error);
+        console.error('💥 [UPDATE-LOTTERY] Ошибка обновления лотереи:', error);
+        console.error('🔍 [UPDATE-LOTTERY] Детали ошибки:', {
+            message: error.message,
+            code: error.code,
+            stack: error.stack
+        });
         res.status(500).json({ success: false, message: "Internal Server Error" });
+        console.log('❌ [UPDATE-LOTTERY] Отправлен ответ об ошибке');
     }
 });
 
 // Удалить лотерею
-router.delete('/:id', isMainAdmin, async (req, res) => {
+router.delete('/:id', async (req, res) => {
+    console.log('🎰 [DELETE-LOTTERY] НАЧАЛО УДАЛЕНИЯ ЛОТЕРЕИ');
     try {
         const { id } = req.params;
         const { adminId } = req.body;
-        const lotteryRef = db.collection('lotteries').doc(id);
-        
-        const doc = await lotteryRef.get();
-        if (!doc.exists) {
+
+        console.log('🆔 [DELETE-LOTTERY] Lottery ID:', id);
+        console.log('👑 [DELETE-LOTTERY] Admin ID:', adminId);
+
+        // Проверка прав администратора
+        if (adminId !== "5206288199") {
+            console.error('❌ [DELETE-LOTTERY] ДОСТУП ЗАПРЕЩЕН - требуется главный админ');
+            return res.status(403).json({ success: false, message: 'Main admin access required' });
+        }
+
+        console.log('🔍 [DELETE-LOTTERY] Поиск лотереи в PostgreSQL...');
+        const existingLottery = await prisma.lottery.findUnique({
+            where: { id: id }
+        });
+
+        if (!existingLottery) {
+            console.error('❌ [DELETE-LOTTERY] Лотерея не найдена');
             return res.status(404).json({ success: false, message: "Lottery not found" });
         }
-        
-        await lotteryRef.delete();
+
+        console.log('🗑️ [DELETE-LOTTERY] Удаление лотереи из PostgreSQL...');
+        await prisma.lottery.delete({
+            where: { id: id }
+        });
+
+        console.log('✅ [DELETE-LOTTERY] Лотерея удалена успешно');
+        console.log('📤 [DELETE-LOTTERY] Отправка ответа клиенту...');
         res.json({ success: true, message: "Lottery deleted successfully" });
+        console.log('✅ [DELETE-LOTTERY] Ответ отправлен успешно');
+
     } catch (error) {
-        console.error("Error deleting lottery:", error);
+        console.error('💥 [DELETE-LOTTERY] Ошибка удаления лотереи:', error);
+        console.error('🔍 [DELETE-LOTTERY] Детали ошибки:', {
+            message: error.message,
+            code: error.code,
+            stack: error.stack
+        });
         res.status(500).json({ success: false, message: "Internal Server Error" });
+        console.log('❌ [DELETE-LOTTERY] Отправлен ответ об ошибке');
     }
 });
 

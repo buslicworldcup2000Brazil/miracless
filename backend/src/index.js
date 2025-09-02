@@ -143,6 +143,16 @@ app.get('/api/exchange-rates', async (req, res) => {
     }
 });
 
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+    res.json({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        version: process.version
+    });
+});
+
 // --- Запуск сервера ---
 console.log('🚀 [SERVER] Запуск сервера...');
 console.log('🔌 [SERVER] Порт:', port);
@@ -157,6 +167,7 @@ app.listen(port, () => {
     console.log(`   POST /api/auth - Аутентификация`);
     console.log(`   GET /api/balance/:userId - Баланс пользователя`);
     console.log(`   GET /api/exchange-rates - Курсы валют`);
+    console.log(`   GET /api/health - Health check`);
     console.log('🎉 [SERVER] ГОТОВ К РАБОТЕ!');
 });
 
