@@ -1,107 +1,188 @@
-// Deposit service for managing cryptocurrency addresses and transactions
+// Deposit service for managing cryptocurrency deposits with new balance system
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
 
 class DepositService {
   constructor() {
     this.addresses = new Map();
-    this.transactions = new Map();
+    this.pendingRequests = new Map();
   }
 
-  // Get deposit addresses for user
-  async getDepositAddresses(userId) {
+  // Get all payment addresses (they are the same for all users)
+  async getAllAddresses(userId) {
     try {
-      const response = await fetch(`${API_BASE_URL}/deposit/addresses/${userId}`);
+      console.log('💰 [DEPOSIT-SERVICE] Getting all payment addresses');
+      const response = await fetch(`${API_BASE_URL}/balance/addresses/${userId}`);
+
       if (response.ok) {
-        const responseText = await response.text();
-        if (!responseText || responseText.trim() === '') {
-          console.warn('Empty response from deposit addresses API');
-          return {};
+        const data = await response.json();
+        if (data.success) {
+          console.log('✅ [DEPOSIT-SERVICE] Addresses received:', Object.keys(data.addresses));
+          return data.addresses;
         }
-        const data = JSON.parse(responseText);
-        return data.addresses || {};
       }
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+
+      throw new Error('Failed to fetch payment addresses');
     } catch (error) {
-      console.error('Error fetching deposit addresses:', error);
-      return {}; // Return empty object if API fails
+      console.error('💥 [DEPOSIT-SERVICE] Error fetching addresses:', error);
+      // Return fallback addresses
+      return {
+        'TON': 'UQC5JgHh2woeEVsNf197RxYWc7y_ybp3TKczyOR8Q1ck9LVo',
+        'USDT_TRC20': 'TAqVqKZ5zHbX4Cz5x5ZGodXLQkuvLCFCYD',
+        'USDT_ERC20': '0x25c03364243614BbA73d5d214E29cBFcE241A825',
+        'ETH': '0x25c03364243614BbA73d5d214E29cBFcE241A825',
+        'BNB': '0x25c03364243614BbA73d5d214E29cBFcE241A825'
+      };
     }
   }
 
-  // Generate or get address for specific currency
+  // Get payment address for specific currency
   async getDepositAddress(userId, currency) {
     try {
-      const response = await fetch(`${API_BASE_URL}/deposit/address`, {
+      console.log('💰 [DEPOSIT-SERVICE] Getting address for currency:', currency);
+      const addresses = await this.getAllAddresses(userId);
+      return addresses[currency] || null;
+    } catch (error) {
+      console.error('💥 [DEPOSIT-SERVICE] Error getting address:', error);
+      return null;
+    }
+  }
+
+  // Create deposit request
+  async createDepositRequest(userId, currency, amount) {
+    try {
+      console.log('💰 [DEPOSIT-SERVICE] Creating deposit request');
+      console.log('👤 [DEPOSIT-SERVICE] User ID:', userId);
+      console.log('💱 [DEPOSIT-SERVICE] Currency:', currency);
+      console.log('💵 [DEPOSIT-SERVICE] Amount:', amount);
+
+      const response = await fetch(`${API_BASE_URL}/balance/deposit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ userId, currency })
+        body: JSON.stringify({
+          userId: userId,
+          currency: currency,
+          amount: parseFloat(amount)
+        }),
       });
 
       if (response.ok) {
         const data = await response.json();
-        return data.address;
-      }
-      throw new Error('Failed to generate deposit address');
-    } catch (error) {
-      console.error(`Error getting ${currency} address:`, error);
-      return null; // Return null if API fails
-    }
-  }
-
-  // Get all addresses for user
-  async getAllAddresses(userId) {
-    const currencies = ['TON', 'USDT_TRC20', 'USDT_ERC20', 'ETH', 'MATIC', 'BNB'];
-    const addresses = {};
-
-    for (const currency of currencies) {
-      addresses[currency] = await this.getDepositAddress(userId, currency);
-    }
-
-    return addresses;
-  }
-
-  // Address generation methods removed - use real API endpoints
-
-  // Check transaction status
-  async checkTransaction(currency, txHash) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/deposit/check-transaction`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ currency, txHash })
-      });
-
-      if (response.ok) {
-        const responseText = await response.text();
-        if (!responseText || responseText.trim() === '') {
-          console.warn('Empty response from transaction check API');
-          return { status: 'unknown', confirmations: 0 };
+        if (data.success) {
+          console.log('✅ [DEPOSIT-SERVICE] Deposit request created:', data.data.id);
+          return data.data;
         }
-        return JSON.parse(responseText);
       }
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to create deposit request');
+
     } catch (error) {
-      console.error('Error checking transaction:', error);
-      return { status: 'unknown', confirmations: 0 };
+      console.error('💥 [DEPOSIT-SERVICE] Error creating deposit request:', error);
+      throw error;
     }
   }
 
-  // Get transaction history for user
-  async getTransactionHistory(userId, limit = 10) {
+  // Confirm payment with transaction hash
+  async confirmPayment(userId, currency, txHash) {
     try {
-      const response = await fetch(`${API_BASE_URL}/deposit/transactions/${userId}?limit=${limit}`);
+      console.log('💰 [DEPOSIT-SERVICE] Confirming payment');
+      console.log('👤 [DEPOSIT-SERVICE] User ID:', userId);
+      console.log('💱 [DEPOSIT-SERVICE] Currency:', currency);
+      console.log('🔗 [DEPOSIT-SERVICE] TX Hash:', txHash);
+
+      const response = await fetch(`${API_BASE_URL}/balance/confirm-payment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: userId,
+          currency: currency,
+          txHash: txHash
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        console.log('✅ [DEPOSIT-SERVICE] Payment confirmed successfully');
+        return data.data;
+      } else {
+        console.warn('⚠️ [DEPOSIT-SERVICE] Payment not confirmed:', data.message);
+        return {
+          success: false,
+          message: data.message,
+          status: data.data?.status,
+          confirmations: data.data?.confirmations
+        };
+      }
+
+    } catch (error) {
+      console.error('💥 [DEPOSIT-SERVICE] Error confirming payment:', error);
+      throw error;
+    }
+  }
+
+  // Get deposit history
+  async getDepositHistory(userId, limit = 20) {
+    try {
+      console.log('💰 [DEPOSIT-SERVICE] Getting deposit history');
+      const response = await fetch(`${API_BASE_URL}/balance/deposit-history/${userId}?limit=${limit}`);
+
       if (response.ok) {
         const data = await response.json();
-        return data.transactions || [];
+        if (data.success) {
+          console.log('✅ [DEPOSIT-SERVICE] History received:', data.data.length, 'records');
+          return data.data;
+        }
       }
-      throw new Error('Failed to fetch transaction history');
+
+      throw new Error('Failed to fetch deposit history');
     } catch (error) {
-      console.error('Error fetching transaction history:', error);
+      console.error('💥 [DEPOSIT-SERVICE] Error fetching history:', error);
       return [];
     }
+  }
+
+  // Get currency information
+  async getCurrencyInfo(currency) {
+    try {
+      console.log('💰 [DEPOSIT-SERVICE] Getting currency info:', currency);
+      const response = await fetch(`${API_BASE_URL}/balance/currency/${currency}`);
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          console.log('✅ [DEPOSIT-SERVICE] Currency info received');
+          return data.data;
+        }
+      }
+
+      throw new Error('Failed to fetch currency info');
+    } catch (error) {
+      console.error('💥 [DEPOSIT-SERVICE] Error fetching currency info:', error);
+      // Return fallback info
+      return {
+        name: currency,
+        fullName: currency,
+        network: currency,
+        decimals: 18,
+        minAmount: 0.01
+      };
+    }
+  }
+
+  // Legacy methods for backward compatibility
+  async checkTransaction(currency, txHash) {
+    console.warn('⚠️ [DEPOSIT-SERVICE] checkTransaction is deprecated, use confirmPayment instead');
+    return { status: 'unknown', confirmations: 0 };
+  }
+
+  async getTransactionHistory(userId, limit = 10) {
+    console.warn('⚠️ [DEPOSIT-SERVICE] getTransactionHistory is deprecated, use getDepositHistory instead');
+    return this.getDepositHistory(userId, limit);
   }
 
   // Format address for display

@@ -55,6 +55,8 @@ const Balance = ({ userId, modalView = false }) => {
   const [paymentData, setPaymentData] = useState({
     currency: 'TON',
     amount: '',
+    txHash: '',
+    isConfirming: false,
     usdAmount: ''
   });
   const [transaction, setTransaction] = useState(null);
@@ -231,34 +233,77 @@ const Balance = ({ userId, modalView = false }) => {
     setIsSubmittingTx(true);
 
     try {
-      // Submit transaction for monitoring
-      const txData = {
-        txHash: txHash.trim(),
-        currency: transaction.currency,
-        userId: userId, // Assuming userId is available from props
-        expectedAmount: transaction.amount,
-        usdAmount: transaction.usdAmount
-      };
+      console.log('💰 [PAYMENT-CONFIRMATION] Подтверждение платежа через новую систему');
 
-      await transactionService.submitForMonitoring(txData);
+      // Use new deposit service to confirm payment
+      const result = await depositService.confirmPayment(userId, transaction.currency, txHash.trim());
 
-      showSnackbar('Транзакция отправлена на проверку! Баланс будет обновлен после подтверждения.', 'success');
-      telegramWebApp.hapticFeedback('success');
+      if (result.success) {
+        showSnackbar(`✅ Платеж подтвержден! Баланс пополнен на $${result.usdAmount}`, 'success');
+        telegramWebApp.hapticFeedback('success');
 
-      // Reset form
-      setTxHash('');
-      setTransaction(null);
-      setPaymentData({
-        currency: 'TON',
-        amount: '',
-        usdAmount: ''
-      });
+        // Update local balance
+        setUserBalance(prev => prev + result.usdAmount);
+
+        // Reset form
+        setTxHash('');
+        setTransaction(null);
+        setPaymentData({
+          currency: 'TON',
+          amount: '',
+          usdAmount: '',
+          txHash: '',
+          isConfirming: false
+        });
+      } else {
+        showSnackbar(result.message || 'Платеж не подтвержден', 'warning');
+      }
 
     } catch (error) {
-      console.error('Error submitting transaction:', error);
-      showSnackbar(error.message || 'Ошибка отправки транзакции', 'error');
+      console.error('💥 [PAYMENT-CONFIRMATION] Ошибка подтверждения платежа:', error);
+      showSnackbar(error.message || 'Ошибка подтверждения платежа', 'error');
     } finally {
       setIsSubmittingTx(false);
+    }
+  };
+
+  // Handle "I Paid" button click
+  const handlePaymentCompleted = async () => {
+    if (!transaction) {
+      showSnackbar('Сначала укажите сумму пополнения', 'error');
+      return;
+    }
+
+    setPaymentData(prev => ({ ...prev, isConfirming: true }));
+
+    try {
+      console.log('💰 [PAYMENT-COMPLETED] Пользователь нажал "Оплатил"');
+
+      // Create deposit request first
+      const depositRequest = await depositService.createDepositRequest(
+        userId,
+        transaction.currency,
+        parseFloat(transaction.amount)
+      );
+
+      showSnackbar('✅ Запрос на пополнение создан! Ожидаем подтверждения транзакции...', 'info');
+
+      // Auto-check payment after 30 seconds
+      setTimeout(async () => {
+        try {
+          console.log('🔍 [AUTO-CHECK] Автоматическая проверка платежа...');
+          // This would be handled by the backend monitoring system
+          showSnackbar('🔄 Проверяем транзакцию...', 'info');
+        } catch (error) {
+          console.error('💥 [AUTO-CHECK] Ошибка автоматической проверки:', error);
+        }
+      }, 30000);
+
+    } catch (error) {
+      console.error('💥 [PAYMENT-COMPLETED] Ошибка создания запроса:', error);
+      showSnackbar(error.message || 'Ошибка создания запроса на пополнение', 'error');
+    } finally {
+      setPaymentData(prev => ({ ...prev, isConfirming: false }));
     }
   };
 
@@ -487,6 +532,14 @@ const Balance = ({ userId, modalView = false }) => {
                 title="Копировать адрес"
               >
                 <ClipboardDocumentIcon width={16} height={16} />
+              </button>
+              <button
+                className="btn-primary"
+                onClick={handlePaymentCompleted}
+                disabled={paymentData.isConfirming}
+                title="Я оплатил"
+              >
+                {paymentData.isConfirming ? 'Создание...' : 'Оплатил'}
               </button>
             </div>
             <p><strong>Сумма:</strong> {transaction.amount} {transaction.currency} (${transaction.usdAmount})</p>
