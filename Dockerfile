@@ -37,8 +37,24 @@ COPY --from=builder /app/backend ./backend
 COPY --from=builder /app/frontend/build ./frontend/build
 COPY --from=builder /app/package*.json ./
 
+# Copy Prisma schema and generated client
+COPY --from=builder /app/backend/prisma ./backend/prisma
+COPY --from=builder /app/backend/node_modules/.prisma ./backend/node_modules/.prisma
+
 # Install production dependencies only (force npm install instead of npm ci)
 RUN cd backend && rm -f package-lock.json && npm install --production --no-optional --ignore-scripts
+
+# Install dev dependencies temporarily for Prisma generation
+RUN cd backend && npm install --save-dev prisma @prisma/client
+
+# Generate Prisma client for production
+RUN cd backend && npx prisma generate
+
+# Run database migrations
+RUN cd backend && npx prisma db push --accept-data-loss
+
+# Remove dev dependencies after generation
+RUN cd backend && npm uninstall prisma
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs
