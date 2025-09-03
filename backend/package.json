@@ -8,7 +8,8 @@
     "npm": ">=10.0.0"
   },
   "scripts": {
-    "start": "node src/index.js",
+    "start": "node scripts/start-with-migrations.js",
+    "start:dev": "node src/index.js",
     "test-firebase": "node test-firebase.js"
   },
   "keywords": [],

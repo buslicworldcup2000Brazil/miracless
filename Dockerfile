@@ -50,11 +50,8 @@ RUN cd backend && npm install --save-dev prisma @prisma/client
 # Generate Prisma client for production
 RUN cd backend && npx prisma generate
 
-# Run database migrations
-RUN cd backend && npx prisma db push --accept-data-loss
-
-# Remove dev dependencies after generation
-RUN cd backend && npm uninstall prisma
+# Keep Prisma CLI for migrations during startup
+# It will be removed after first successful migration
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs
