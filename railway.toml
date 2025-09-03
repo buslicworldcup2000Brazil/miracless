@@ -10,3 +10,7 @@ restartPolicyMaxRetries = 10
 
 [build.args]
 NODE_ENV = "production"
+
+# Ensure environment variables are passed to the container
+[build]
+dockerfilePath = "Dockerfile"

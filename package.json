@@ -23,6 +23,7 @@
     "docker:test": "docker build -t miracless-test . && echo '✅ Docker build successful!'",
     "railway:check": "echo '🔍 Checking Railway deployment status...' && echo '📋 Make sure these files exist:' && ls -la Dockerfile railway.toml .nvmrc || echo '❌ Missing deployment files'",
     "railway:force": "echo '💪 Force Railway to rebuild:' && echo '1. Push changes to GitHub' && echo '2. Go to Railway Dashboard' && echo '3. Click Deploy' && echo '4. Or use: railway redeploy'",
+    "railway:env-check": "echo '🔍 Railway Environment Variables Check:' && echo 'Required: DATABASE_URL, TELEGRAM_BOT_TOKEN, FIREBASE_SERVICE_ACCOUNT' && echo 'Optional: TON_API_KEY, ETH_API_KEY, COINGECKO_API_KEY'",
     "update-lockfiles": "rm -f package-lock.json frontend/package-lock.json backend/package-lock.json && npm install && cd frontend && npm install && cd ../backend && npm install && cd ..",
     "dev": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
     "deploy": "npm run build && git add . && git commit -m \"Deploy\" && git push origin main",

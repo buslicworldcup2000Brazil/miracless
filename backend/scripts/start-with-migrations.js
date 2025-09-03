@@ -18,10 +18,29 @@ async function runMigrations() {
 
     console.log('🚀 Running database migrations...');
 
+    // Ensure DATABASE_URL is available
+    const databaseUrl = process.env.DATABASE_URL;
+    if (!databaseUrl) {
+      console.error('❌ DATABASE_URL environment variable is not set!');
+      console.log('📋 Available environment variables:', Object.keys(process.env).filter(key => key.includes('DATABASE') || key.includes('DB')));
+
+      // In development/test environments, skip migrations if DB is not configured
+      if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+        console.log('⚠️  Skipping migrations in development/test environment');
+        fs.writeFileSync(MIGRATION_FLAG, 'skipped-' + new Date().toISOString());
+        return;
+      }
+
+      throw new Error('DATABASE_URL environment variable is required for migrations');
+    }
+
+    console.log('✅ DATABASE_URL is available');
+
     // Run Prisma migrations
     execSync('npx prisma db push --accept-data-loss', {
       stdio: 'inherit',
-      cwd: path.join(__dirname, '..')
+      cwd: path.join(__dirname, '..'),
+      env: { ...process.env, DATABASE_URL: databaseUrl }
     });
 
     // Create flag file to indicate migrations are complete
@@ -41,6 +60,7 @@ async function runMigrations() {
 
   } catch (error) {
     console.error('❌ Database migration failed:', error.message);
+    console.error('💡 Make sure DATABASE_URL is set in Railway environment variables');
     process.exit(1);
   }
 }
