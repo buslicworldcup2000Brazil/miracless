@@ -7,7 +7,6 @@ import adminLogsService from '../services/adminLogsService';
 
 const Admin = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [selectedUsers, setSelectedUsers] = useState([]);
   const [selectedLottery, setSelectedLottery] = useState('');
   const [manualUserId, setManualUserId] = useState('');
   const [showAddParticipant, setShowAddParticipant] = useState(false);
