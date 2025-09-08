@@ -146,33 +146,6 @@ class DepositService {
     }
   }
 
-  // Get currency information
-  async getCurrencyInfo(currency) {
-    try {
-      console.log('💰 [DEPOSIT-SERVICE] Getting currency info:', currency);
-      const response = await fetch(`${API_BASE_URL}/balance/currency/${currency}`);
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          console.log('✅ [DEPOSIT-SERVICE] Currency info received');
-          return data.data;
-        }
-      }
-
-      throw new Error('Failed to fetch currency info');
-    } catch (error) {
-      console.error('💥 [DEPOSIT-SERVICE] Error fetching currency info:', error);
-      // Return fallback info
-      return {
-        name: currency,
-        fullName: currency,
-        network: currency,
-        decimals: 18,
-        minAmount: 0.01
-      };
-    }
-  }
 
   // Legacy methods for backward compatibility
   async checkTransaction(currency, txHash) {

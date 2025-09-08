@@ -9,7 +9,6 @@ import lotteryService from '../services/lotteryService';
 import telegramWebApp from '../services/telegramWebApp';
 import paymentService from '../services/paymentService';
 import conversionService from '../services/conversionService';
-import transactionService from '../services/transactionService';
 import depositService from '../services/depositService';
 
 // Conversion service will be initialized when needed
@@ -280,7 +279,7 @@ const Balance = ({ userId, modalView = false }) => {
       console.log('💰 [PAYMENT-COMPLETED] Пользователь нажал "Оплатил"');
 
       // Create deposit request first
-      const depositRequest = await depositService.createDepositRequest(
+      await depositService.createDepositRequest(
         userId,
         transaction.currency,
         parseFloat(transaction.amount)

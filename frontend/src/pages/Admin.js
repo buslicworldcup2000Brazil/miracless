@@ -21,8 +21,6 @@ const Admin = () => {
   const [lotteries, setLotteries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingLottery, setEditingLottery] = useState(null);
-  const [analytics, setAnalytics] = useState(null);
-  const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [showWinnerSelection, setShowWinnerSelection] = useState(false);
   const [selectedLotteryForWinner, setSelectedLotteryForWinner] = useState(null);
   const [selectedWinner, setSelectedWinner] = useState(null);
@@ -72,27 +70,7 @@ const Admin = () => {
     loadLotteries();
   }, []);
 
-  // Load analytics when statistics tab is opened
-  const loadAnalytics = async () => {
-    try {
-      setAnalyticsLoading(true);
-      const adminId = "5206288199"; // Main admin ID for production
-      const data = await analyticsService.getAnalytics(adminId);
-      setAnalytics(data);
-    } catch (error) {
-      console.error('Error loading analytics:', error);
-      telegramWebApp.showAlert('Ошибка загрузки аналитики');
-    } finally {
-      setAnalyticsLoading(false);
-    }
-  };
 
-  // Load analytics when statistics section is opened
-  useEffect(() => {
-    if (showStatistics && !analytics) {
-      loadAnalytics();
-    }
-  }, [showStatistics, analytics]);
 
   // Load admin logs when logs section is opened
   const loadAdminLogs = async (searchQuery = '') => {
@@ -352,14 +330,6 @@ const Admin = () => {
   };
 
 
-  const handleAddUsersToLottery = () => {
-    if (selectedUsers.length > 0 && selectedLottery) {
-      console.log(`Adding users ${selectedUsers.join(', ')} to lottery ${selectedLottery}`);
-      // Здесь будет логика добавления пользователей в лотерею
-      setSelectedUsers([]);
-      setSelectedLottery('');
-    }
-  };
 
   // Handle creating new fake user - removed for production
   const handleCreateFakeUser = async () => {
@@ -726,197 +696,7 @@ const Admin = () => {
         </div>
       )}
 
-      {showCharacterForm && adminLevel === 'main' && (
-        <div className="character-form">
-          <h2>Fake Users</h2>
-          <div className="fake-users-list">
-            <p>Выберите пользователей для добавления в лотереи:</p>
-            <div className="users-selection">
-              <p>Fake users functionality removed for production</p>
-            </div>
-            <div className="lottery-selection">
-              <label>Выберите лотерею:</label>
-              <select 
-                value={selectedLottery}
-                onChange={(e) => setSelectedLottery(e.target.value)}
-              >
-                <option value="">Выберите лотерею</option>
-                {lotteries.map(lottery => (
-                  <option key={lottery.id} value={lottery.id}>{lottery.title}</option>
-                ))}
-              </select>
-            </div>
-            <button 
-              className="btn-submit"
-              onClick={handleAddUsersToLottery}
-              disabled={selectedUsers.length === 0 || !selectedLottery}
-            >
-              Добавить в лотерею ({selectedUsers.length} выбрано)
-            </button>
-          </div>
-        </div>
-      )}
 
-      {showStatistics && (
-        <div className="statistics-section">
-          <h2>Детальная статистика</h2>
-
-          {analyticsLoading ? (
-            <div className="loading-spinner"></div>
-          ) : analytics ? (
-            <>
-              <div className="stats-grid">
-                <div className="stat-card">
-                  <h3>Общий баланс</h3>
-                  <p className="stat-value">{analyticsService.formatCurrency(analytics.overview.totalBalance)}</p>
-                </div>
-                <div className="stat-card">
-                  <h3>Всего пользователей</h3>
-                  <p className="stat-value">{analytics.overview.totalUsers}</p>
-                </div>
-                <div className="stat-card">
-                  <h3>Активные пользователи</h3>
-                  <p className="stat-value">{analytics.overview.activeUsers}</p>
-                </div>
-                <div className="stat-card">
-                  <h3>Общий доход</h3>
-                  <p className="stat-value">{analyticsService.formatCurrency(analytics.overview.totalRevenue)}</p>
-                </div>
-                <div className="stat-card">
-                  <h3>Активные лотереи</h3>
-                  <p className="stat-value">{analytics.overview.activeLotteries}</p>
-                </div>
-                <div className="stat-card">
-                  <h3>Завершенные лотереи</h3>
-                  <p className="stat-value">{analytics.overview.completedLotteries}</p>
-                </div>
-                <div className="stat-card">
-                  <h3>Всего участников</h3>
-                  <p className="stat-value">{analytics.overview.totalParticipants}</p>
-                </div>
-                <div className="stat-card">
-                  <h3>Транзакций</h3>
-                  <p className="stat-value">{analytics.overview.totalTransactions}</p>
-                </div>
-              </div>
-
-              {/* Recent Transactions */}
-              <div className="recent-transactions">
-                <h3>Последние транзакции</h3>
-                {analytics.recentTransactions && analytics.recentTransactions.length > 0 ? (
-                  <div className="transactions-list">
-                    {analytics.recentTransactions.slice(0, 5).map(tx => (
-                      <div key={tx.id} className="transaction-item">
-                        <div className="transaction-info">
-                          <span className="transaction-amount">
-                            {analyticsService.formatCurrency(tx.usdAmount || 0)}
-                          </span>
-                          <span className="transaction-user">ID: {tx.userId}</span>
-                        </div>
-                        <div className="transaction-date">
-                          {tx.processedAt ? analyticsService.formatDate(tx.processedAt) : 'Неизвестно'}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p>Нет транзакций</p>
-                )}
-              </div>
-
-              {/* Top Users */}
-              <div className="top-users">
-                <h3>Топ пользователей по балансу</h3>
-                {analytics.topUsers && analytics.topUsers.length > 0 ? (
-                  <div className="users-list">
-                    {analytics.topUsers.slice(0, 5).map((user, index) => (
-                      <div key={user.id} className="user-item">
-                        <span className="user-rank">#{index + 1}</span>
-                        <span className="user-id">ID: {user.id}</span>
-                        <span className="user-balance">
-                          {analyticsService.formatCurrency(user.balance || 0)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p>Нет пользователей</p>
-                )}
-              </div>
-            </>
-          ) : (
-            <p>Ошибка загрузки данных</p>
-          )}
-          
-          <div className="financial-stats">
-            <h3>Финансовая статистика</h3>
-            <div className="financial-grid">
-              <div className="financial-item">
-                <span>День:</span>
-                <span>$0.00</span>
-              </div>
-              <div className="financial-item">
-                <span>Неделя:</span>
-                <span>$0.00</span>
-              </div>
-              <div className="financial-item">
-                <span>2 недели:</span>
-                <span>$0.00</span>
-              </div>
-              <div className="financial-item">
-                <span>Месяц:</span>
-                <span>$0.00</span>
-              </div>
-              <div className="financial-item">
-                <span>3 месяца:</span>
-                <span>$0.00</span>
-              </div>
-              <div className="financial-item">
-                <span>6 месяцев:</span>
-                <span>$0.00</span>
-              </div>
-              <div className="financial-item">
-                <span>Год:</span>
-                <span>$0.00</span>
-              </div>
-              <div className="financial-item">
-                <span>Все время:</span>
-                <span>$0.00</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="charts-section">
-            <h3>Графики активности</h3>
-            <div className="chart-placeholder">
-              {/* Здесь будет график регистраций */}
-              <p>График регистраций реальных пользователей</p>
-              <div className="chart-animation">
-                <div className="chart-bar" style={{height: '20%'}}></div>
-                <div className="chart-bar" style={{height: '40%'}}></div>
-                <div className="chart-bar" style={{height: '60%'}}></div>
-                <div className="chart-bar" style={{height: '80%'}}></div>
-                <div className="chart-bar" style={{height: '100%'}}></div>
-                <div className="chart-bar" style={{height: '70%'}}></div>
-                <div className="chart-bar" style={{height: '50%'}}></div>
-              </div>
-            </div>
-            <div className="chart-placeholder">
-              {/* Здесь будет график финансов */}
-              <p>График финансовой активности</p>
-              <div className="chart-animation">
-                <div className="chart-line" style={{width: '20%'}}></div>
-                <div className="chart-line" style={{width: '40%'}}></div>
-                <div className="chart-line" style={{width: '60%'}}></div>
-                <div className="chart-line" style={{width: '80%'}}></div>
-                <div className="chart-line" style={{width: '100%'}}></div>
-                <div className="chart-line" style={{width: '70%'}}></div>
-                <div className="chart-line" style={{width: '50%'}}></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Admin Logs Section */}
       {showAdminLogs && (
