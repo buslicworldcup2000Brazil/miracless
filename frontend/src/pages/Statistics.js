@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   UsersIcon,
   CurrencyDollarIcon,
@@ -35,11 +35,7 @@ const Statistics = ({ userId, isAdmin = false }) => {
   // const [notificationStats, setNotificationStats] = useState(null);
   // const [chartsLoading, setChartsLoading] = useState(false);
 
-  useEffect(() => {
-    loadStatistics();
-  }, [selectedPeriod]);
-
-  const loadStatistics = async () => {
+  const loadStatistics = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -104,7 +100,11 @@ const Statistics = ({ userId, isAdmin = false }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedPeriod, userId]);
+
+  useEffect(() => {
+    loadStatistics();
+  }, [loadStatistics]);
 
   const getPeriodStart = (period) => {
     const now = new Date();

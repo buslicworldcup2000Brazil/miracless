@@ -7,8 +7,6 @@ import adminLogsService from '../services/adminLogsService';
 
 const Admin = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [showCharacterForm, setShowCharacterForm] = useState(false);
-  const [showStatistics, setShowStatistics] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [selectedLottery, setSelectedLottery] = useState('');
   const [manualUserId, setManualUserId] = useState('');
@@ -353,15 +351,6 @@ const Admin = () => {
     }
   };
 
-  const toggleUserSelection = (userId) => {
-    setSelectedUsers(prev => {
-      if (prev.includes(userId)) {
-        return prev.filter(id => id !== userId);
-      } else {
-        return [...prev, userId];
-      }
-    });
-  };
 
   const handleAddUsersToLottery = () => {
     if (selectedUsers.length > 0 && selectedLottery) {
